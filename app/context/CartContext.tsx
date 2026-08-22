@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 
+
 type Product = {
   name: string;
   slug: string;
