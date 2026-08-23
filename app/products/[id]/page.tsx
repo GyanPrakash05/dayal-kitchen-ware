@@ -1,140 +1,151 @@
 import Image from "next/image";
-import AddToCartButton from "../../components/AddToCartButton";
+import { notFound } from "next/navigation";
+import { supabase } from "@/app/lib/supabase";
 
-const products = {
-  "premium-cookware-set": {
-    name: "Premium Cookware Set",
-    category: "Cookware",
-    price: "₹1,499",
-    oldPrice: "₹1,999",
-    image: "/products/premium-cookware-set.jpg",
-  },
-
-  "elegant-dinner-set": {
-    name: "Elegant Dinner Set",
-    category: "Dinner Sets",
-    price: "₹2,299",
-    oldPrice: "₹2,999",
-    image: "/products/elegant-dinner-set.jpg",
-  },
-
-  "kitchen-essentials-set": {
-    name: "Kitchen Essentials Set",
-    category: "Kitchen Tools",
-    price: "₹699",
-    oldPrice: "₹999",
-    image: "/products/kitchen-essentials-set.jpg",
-  },
+type ProductPageProps = {
+  params: Promise<{
+    id: string;
+  }>;
 };
 
 export default async function ProductPage({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+}: ProductPageProps) {
   const { id } = await params;
 
-  const product = products[id as keyof typeof products];
+  const { data: product, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("slug", id)
+    .single();
 
-  if (!product) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#faf9f6]">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold">
-            Product Not Found
-          </h1>
-
-          <a
-            href="/"
-            className="mt-6 inline-block rounded-full bg-zinc-900 px-6 py-3 text-white"
-          >
-            ← Back to Home
-          </a>
-        </div>
-      </main>
-    );
+  if (error || !product) {
+    console.error("PRODUCT DETAIL ERROR:", error);
+    notFound();
   }
 
+  const whatsappMessage = `Hello Dayal Kitchen Ware 👋
+
+I am interested in:
+
+${product.name}
+
+Price: ₹${product.price}
+
+Please share more details and availability.`;
+
+  const whatsappLink = `https://wa.me/917011872380?text=${encodeURIComponent(
+    whatsappMessage
+  )}`;
+
   return (
-    <main className="min-h-screen bg-[#faf9f6] p-6">
+    <main className="min-h-screen bg-[#faf9f6] text-zinc-900">
+      {/* NAVBAR */}
+      <header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <a href="/" className="block">
+            <h1 className="text-lg font-bold sm:text-xl">
+              DAYAL KITCHEN WARE
+            </h1>
 
-      <div className="mx-auto max-w-6xl">
+            <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-500 sm:text-[10px]">
+              Kitchen • Home • Lifestyle
+            </p>
+          </a>
 
-        <a
-          href="/"
-          className="inline-block py-6 text-sm font-semibold hover:text-amber-700"
-        >
-          ← Back to Shop
-        </a>
+          <a
+            href="/#products"
+            className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
+          >
+            ← Back to Products
+          </a>
+        </div>
+      </header>
 
-        <div className="grid gap-10 rounded-3xl bg-white p-8 shadow-sm md:grid-cols-2">
-
-          {/* IMAGE */}
-
-          <div className="flex min-h-[450px] items-center justify-center rounded-3xl bg-[#eee8dc]">
-
-            <Image
-              src={product.image}
-              alt={product.name}
-              width={600}
-              height={600}
-              className="max-h-[450px] w-full object-contain p-8"
-              priority
-            />
-
+      {/* PRODUCT */}
+      <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-24">
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+          {/* PRODUCT IMAGE */}
+          <div className="relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-[2rem] bg-[#eee8dc] sm:min-h-[500px]">
+            {product.image ? (
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-contain p-8 sm:p-12"
+              />
+            ) : (
+              <div className="text-8xl sm:text-9xl">
+                🍳
+              </div>
+            )}
           </div>
 
-
-          {/* PRODUCT DETAILS */}
-
+          {/* DETAILS */}
           <div className="flex flex-col justify-center">
+            {/* BADGE */}
+            {product.badge && (
+              <span className="mb-4 w-fit rounded-full bg-amber-100 px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+                {product.badge}
+              </span>
+            )}
 
+            {/* CATEGORY */}
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
               {product.category}
             </p>
 
-            <h1 className="mt-3 text-4xl font-bold">
+            {/* NAME */}
+            <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
               {product.name}
             </h1>
 
+            {/* PRICE */}
             <div className="mt-6 flex items-center gap-4">
-
               <span className="text-3xl font-bold">
-                {product.price}
+                ₹{product.price}
               </span>
 
-              <span className="text-lg text-zinc-400 line-through">
-                {product.oldPrice}
-              </span>
-
+              {product.old_price && (
+                <span className="text-lg text-zinc-400 line-through">
+                  ₹{product.old_price}
+                </span>
+              )}
             </div>
 
-            <p className="mt-6 leading-7 text-zinc-600">
-              Premium quality kitchenware designed for everyday
-              cooking, serving and modern homes.
-            </p>
+            {/* DESCRIPTION */}
+            <div className="mt-8">
+              <h2 className="text-lg font-bold">
+                Product Description
+              </h2>
 
-           <AddToCartButton
-  product={{
-    name: product.name,
-    slug: id,
-    price: product.price,
-    image: product.image,
-  }}
-/>
+              <p className="mt-3 whitespace-pre-line text-lg leading-8 text-zinc-600">
+                {product.description}
+              </p>
+            </div>
+
+            {/* WHATSAPP */}
             <a
-              href="/"
-              className="mt-4 text-center text-sm font-semibold underline underline-offset-4"
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-8 block rounded-full bg-green-600 px-8 py-4 text-center font-semibold text-white transition hover:bg-green-700"
+            >
+              Ask on WhatsApp
+            </a>
+
+            {/* BACK */}
+            <a
+              href="/#products"
+              className="mt-4 block rounded-full border border-zinc-300 bg-white px-8 py-4 text-center font-semibold transition hover:border-zinc-900"
             >
               Continue Shopping
             </a>
-
           </div>
-
         </div>
-
-      </div>
-
+      </section>
     </main>
   );
 }
