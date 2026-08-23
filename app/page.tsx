@@ -1,4 +1,5 @@
 import { supabase } from "./lib/supabase";
+import ProductGallery from "@/app/components/ProductGallery";
 
 import ScrollReveal from "./components/ScrollReveal";
 

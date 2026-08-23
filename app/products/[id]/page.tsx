@@ -1,6 +1,7 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
+
+import ProductGallery from "@/app/components/ProductGallery";
 
 type ProductPageProps = {
   params: Promise<{
@@ -40,9 +41,14 @@ Please share more details and availability.`;
 
   return (
     <main className="min-h-screen bg-[#faf9f6] text-zinc-900">
+
+      {/* ================================================= */}
       {/* NAVBAR */}
+      {/* ================================================= */}
+
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+
           <a href="/" className="block">
             <h1 className="text-lg font-bold sm:text-xl">
               DAYAL KITCHEN WARE
@@ -59,51 +65,63 @@ Please share more details and availability.`;
           >
             ← Back to Products
           </a>
+
         </div>
       </header>
 
-      {/* PRODUCT */}
-      <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-24">
-        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
-          {/* PRODUCT IMAGE */}
-          <div className="relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-[2rem] bg-[#eee8dc] sm:min-h-[500px]">
-            {product.image ? (
-              <Image
-                src={product.image}
-                alt={product.name}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain p-8 sm:p-12"
-              />
-            ) : (
-              <div className="text-8xl sm:text-9xl">
-                🍳
-              </div>
-            )}
-          </div>
 
-          {/* DETAILS */}
+      {/* ================================================= */}
+      {/* PRODUCT */}
+      {/* ================================================= */}
+
+      <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-24">
+
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+
+          {/* ================================================= */}
+          {/* PRODUCT GALLERY */}
+          {/* ================================================= */}
+
+          <ProductGallery
+            name={product.name}
+            image={product.image}
+            images={product.images}
+          />
+
+
+          {/* ================================================= */}
+          {/* PRODUCT DETAILS */}
+          {/* ================================================= */}
+
           <div className="flex flex-col justify-center">
+
             {/* BADGE */}
+
             {product.badge && (
               <span className="mb-4 w-fit rounded-full bg-amber-100 px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-800">
                 {product.badge}
               </span>
             )}
 
+
             {/* CATEGORY */}
+
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
               {product.category}
             </p>
 
+
             {/* NAME */}
+
             <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
               {product.name}
             </h1>
 
+
             {/* PRICE */}
+
             <div className="mt-6 flex items-center gap-4">
+
               <span className="text-3xl font-bold">
                 ₹{product.price}
               </span>
@@ -113,10 +131,14 @@ Please share more details and availability.`;
                   ₹{product.old_price}
                 </span>
               )}
+
             </div>
 
+
             {/* DESCRIPTION */}
+
             <div className="mt-8">
+
               <h2 className="text-lg font-bold">
                 Product Description
               </h2>
@@ -124,9 +146,12 @@ Please share more details and availability.`;
               <p className="mt-3 whitespace-pre-line text-lg leading-8 text-zinc-600">
                 {product.description}
               </p>
+
             </div>
 
+
             {/* WHATSAPP */}
+
             <a
               href={whatsappLink}
               target="_blank"
@@ -136,16 +161,22 @@ Please share more details and availability.`;
               Ask on WhatsApp
             </a>
 
+
             {/* BACK */}
+
             <a
               href="/#products"
               className="mt-4 block rounded-full border border-zinc-300 bg-white px-8 py-4 text-center font-semibold transition hover:border-zinc-900"
             >
               Continue Shopping
             </a>
+
           </div>
+
         </div>
+
       </section>
+
     </main>
   );
 }
