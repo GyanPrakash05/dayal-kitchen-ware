@@ -9,6 +9,54 @@ function createSlug(name: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+/* =========================================================
+   CHECK ADMIN AUTHENTICATION
+========================================================= */
+
+async function verifyAdmin(request: Request) {
+  const authHeader = request.headers.get("authorization");
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return {
+      authenticated: false,
+      error: "Authentication required.",
+    };
+  }
+
+  const token = authHeader.replace("Bearer ", "").trim();
+
+  if (!token) {
+    return {
+      authenticated: false,
+      error: "Authentication required.",
+    };
+  }
+
+  const {
+    data: { user },
+    error,
+  } = await supabaseAdmin.auth.getUser(token);
+
+  if (error || !user) {
+    console.error("AUTH ERROR:", error);
+
+    return {
+      authenticated: false,
+      error: "Invalid or expired session.",
+    };
+  }
+
+  return {
+    authenticated: true,
+    user,
+  };
+}
+
+/* =========================================================
+   GET PRODUCTS
+   Public — no login required
+========================================================= */
+
 export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("products")
@@ -33,13 +81,41 @@ export async function GET() {
   });
 }
 
+/* =========================================================
+   POST PRODUCT
+   Protected — login required
+========================================================= */
+
 export async function POST(request: Request) {
   try {
-    // FormData receive karo
+    /* -------------------------------------------------------
+       AUTH CHECK
+    ------------------------------------------------------- */
+
+    const auth = await verifyAdmin(request);
+
+    if (!auth.authenticated) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: auth.error,
+        },
+        { status: 401 }
+      );
+    }
+
+    /* -------------------------------------------------------
+       FORM DATA
+    ------------------------------------------------------- */
+
     const formData = await request.formData();
 
     const name = String(formData.get("name") || "").trim();
-    const category = String(formData.get("category") || "").trim();
+
+    const category = String(
+      formData.get("category") || ""
+    ).trim();
+
     const price = Number(formData.get("price"));
 
     const oldPriceValue = String(
@@ -57,10 +133,12 @@ export async function POST(request: Request) {
       formData.get("description") || ""
     ).trim();
 
-    // Image
     const image = formData.get("image");
 
-    // Basic validation
+    /* -------------------------------------------------------
+       BASIC VALIDATION
+    ------------------------------------------------------- */
+
     if (!name || !category || !price || !description) {
       return NextResponse.json(
         {
@@ -81,7 +159,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5 MB limit
+    /* -------------------------------------------------------
+       IMAGE SIZE
+    ------------------------------------------------------- */
+
     if (image.size > 5 * 1024 * 1024) {
       return NextResponse.json(
         {
@@ -92,7 +173,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Allowed image types
+    /* -------------------------------------------------------
+       IMAGE TYPE
+    ------------------------------------------------------- */
+
     const allowedTypes = [
       "image/jpeg",
       "image/png",
@@ -109,9 +193,16 @@ export async function POST(request: Request) {
       );
     }
 
+    /* -------------------------------------------------------
+       SLUG
+    ------------------------------------------------------- */
+
     const slug = createSlug(name);
 
-    // File extension
+    /* -------------------------------------------------------
+       FILE EXTENSION
+    ------------------------------------------------------- */
+
     const extension =
       image.type === "image/png"
         ? "png"
@@ -119,14 +210,24 @@ export async function POST(request: Request) {
         ? "webp"
         : "jpg";
 
-    // Unique file name
+    /* -------------------------------------------------------
+       UNIQUE FILE NAME
+    ------------------------------------------------------- */
+
     const fileName = `${slug}-${Date.now()}.${extension}`;
 
-    // Convert browser File to Buffer
+    /* -------------------------------------------------------
+       CONVERT FILE TO BUFFER
+    ------------------------------------------------------- */
+
     const arrayBuffer = await image.arrayBuffer();
+
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload image to Supabase Storage
+    /* -------------------------------------------------------
+       UPLOAD IMAGE TO SUPABASE STORAGE
+    ------------------------------------------------------- */
+
     const { error: uploadError } =
       await supabaseAdmin.storage
         .from("products")
@@ -150,14 +251,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Public image URL
+    /* -------------------------------------------------------
+       PUBLIC IMAGE URL
+    ------------------------------------------------------- */
+
     const {
       data: { publicUrl },
     } = supabaseAdmin.storage
       .from("products")
       .getPublicUrl(fileName);
 
-    // Save product + image URL in database
+    /* -------------------------------------------------------
+       INSERT PRODUCT
+    ------------------------------------------------------- */
+
     const { data, error } = await supabaseAdmin
       .from("products")
       .insert({
@@ -173,11 +280,14 @@ export async function POST(request: Request) {
       .select()
       .single();
 
+    /* -------------------------------------------------------
+       IF DATABASE INSERT FAILS
+       DELETE UPLOADED IMAGE
+    ------------------------------------------------------- */
+
     if (error) {
       console.error("SUPABASE INSERT ERROR:", error);
 
-      // Agar database insert fail ho jaye,
-      // uploaded image ko bhi remove karne ki koshish karo.
       await supabaseAdmin.storage
         .from("products")
         .remove([fileName]);
@@ -190,6 +300,10 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    /* -------------------------------------------------------
+       SUCCESS
+    ------------------------------------------------------- */
 
     return NextResponse.json({
       success: true,

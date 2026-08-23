@@ -1,10 +1,51 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/app/lib/supabase";
 
 export default function AdminPage() {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    async function checkAuth() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("/admin/login");
+        return;
+      }
+
+      setCheckingAuth(false);
+    }
+
+    checkAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.replace("/admin/login");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+
+    router.replace("/admin/login");
+    router.refresh();
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -12,50 +53,93 @@ export default function AdminPage() {
     setLoading(true);
     setMessage("");
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const response = await fetch("/api/products", {
-  method: "POST",
-  body: formData,
-});
+      if (!session) {
+        router.replace("/admin/login");
+        return;
+      }
 
-    const data = await response.json();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
 
-    if (!response.ok) {
-      setMessage(data.error || "Something went wrong.");
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.error || "Something went wrong.");
+        return;
+      }
+
+      setMessage("Product added successfully! ✅");
+      form.reset();
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
-      return;
     }
+  }
 
-    setMessage("Product added successfully! ✅");
-    form.reset();
-    setLoading(false);
+  if (checkingAuth) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#faf9f6]">
+        <p className="text-sm text-zinc-500">
+          Checking authentication...
+        </p>
+      </main>
+    );
   }
 
   return (
     <main className="min-h-screen bg-[#faf9f6] px-6 py-12 text-zinc-900">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-10">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Dayal Kitchen Ware
-          </p>
 
-          <h1 className="mt-2 text-4xl font-bold">
-            Admin Dashboard
-          </h1>
+        {/* HEADER */}
 
-          <p className="mt-3 text-zinc-500">
-            Add products to your store.
-          </p>
+        <div className="mb-10 flex items-start justify-between gap-6">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
+              Dayal Kitchen Ware
+            </p>
+
+            <h1 className="mt-2 text-4xl font-bold">
+              Admin Dashboard
+            </h1>
+
+            <p className="mt-3 text-zinc-500">
+              Add products to your store.
+            </p>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold transition hover:bg-zinc-100"
+          >
+            Logout
+          </button>
         </div>
+
+        {/* PRODUCT FORM */}
 
         <form
           onSubmit={handleSubmit}
           className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
         >
           <div className="grid gap-6 sm:grid-cols-2">
+
             {/* PRODUCT NAME */}
+
             <div className="sm:col-span-2">
               <label className="mb-2 block text-sm font-semibold">
                 Product Name
@@ -70,6 +154,7 @@ export default function AdminPage() {
             </div>
 
             {/* CATEGORY */}
+
             <div>
               <label className="mb-2 block text-sm font-semibold">
                 Category
@@ -84,6 +169,7 @@ export default function AdminPage() {
             </div>
 
             {/* PRICE */}
+
             <div>
               <label className="mb-2 block text-sm font-semibold">
                 Price
@@ -99,6 +185,7 @@ export default function AdminPage() {
             </div>
 
             {/* OLD PRICE */}
+
             <div>
               <label className="mb-2 block text-sm font-semibold">
                 Old Price
@@ -113,6 +200,7 @@ export default function AdminPage() {
             </div>
 
             {/* BADGE */}
+
             <div>
               <label className="mb-2 block text-sm font-semibold">
                 Badge
@@ -132,26 +220,28 @@ export default function AdminPage() {
               </select>
             </div>
 
-           {/* PRODUCT IMAGE */}
-<div className="sm:col-span-2">
-  <label className="mb-2 block text-sm font-semibold">
-    Product Image
-  </label>
+            {/* IMAGE */}
 
-  <input
-    name="image"
-    type="file"
-    accept="image/jpeg,image/png,image/webp"
-    required
-    className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3"
-  />
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-semibold">
+                Product Image
+              </label>
 
-  <p className="mt-2 text-xs text-zinc-500">
-    JPG, PNG or WEBP • Maximum 5MB
-  </p>
-</div>
+              <input
+                name="image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                required
+                className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3"
+              />
 
-             {/* DESCRIPTION */}
+              <p className="mt-2 text-xs text-zinc-500">
+                JPG, PNG or WEBP • Maximum 5MB
+              </p>
+            </div>
+
+            {/* DESCRIPTION */}
+
             <div className="sm:col-span-2">
               <label className="mb-2 block text-sm font-semibold">
                 Description
@@ -166,6 +256,8 @@ export default function AdminPage() {
               />
             </div>
           </div>
+
+          {/* SUBMIT */}
 
           <button
             type="submit"
