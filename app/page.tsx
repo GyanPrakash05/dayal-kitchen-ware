@@ -1,6 +1,12 @@
 import { supabase } from "./lib/supabase";
 
+import ScrollReveal from "./components/ScrollReveal";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const WHATSAPP_NUMBER = "917011872380";
+
 
 const whatsappMessage =
   "Hello Dayal Kitchen Ware 👋 I have a query about your products.";
