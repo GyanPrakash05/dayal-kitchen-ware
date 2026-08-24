@@ -1,5 +1,6 @@
 import { supabase } from "./lib/supabase";
 import ProductCardImage from "./components/ProductCardImage";
+import MobileBottomNav from "./components/MobileBottomNav";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -158,7 +159,7 @@ export default async function Home({
   // =========================================================
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] text-zinc-900">
+    <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 text-zinc-900 md:pb-0">
 
       {/* ===================================================== */}
       {/* NAVBAR */}
@@ -1453,7 +1454,61 @@ Please share more details and availability.`
         </div>
 
       </footer>
+            
 
+      {/* MOBILE BOTTOM NAVIGATION */}
+
+      <nav className="fixed bottom-0 left-0 right-0 z-[100] border-t border-black/10 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-xl md:hidden">
+
+        <div className="mx-auto flex max-w-md items-center justify-around">
+
+          <a
+            href="#home"
+            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
+          >
+            <span className="text-xl">⌂</span>
+            <span className="text-[10px] font-semibold">Home</span>
+          </a>
+
+          <a
+            href="#categories"
+            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
+          >
+            <span className="text-xl">▦</span>
+            <span className="text-[10px] font-semibold">Categories</span>
+          </a>
+
+          <a
+            href="#products"
+            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
+          >
+            <span className="text-xl">🛍</span>
+            <span className="text-[10px] font-semibold">Products</span>
+          </a>
+
+          <a
+            href="#about"
+            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
+          >
+            <span className="text-xl">ⓘ</span>
+            <span className="text-[10px] font-semibold">About</span>
+          </a>
+
+          <a
+            href={whatsappLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-green-600 transition-all active:scale-90"
+          >
+            <span className="text-xl">💬</span>
+            <span className="text-[10px] font-semibold">WhatsApp</span>
+          </a>
+
+        </div>
+
+      </nav>
+
+     <MobileBottomNav />
     </main>
   );
 }
