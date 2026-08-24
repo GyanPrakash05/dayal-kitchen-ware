@@ -50,9 +50,12 @@ export default async function Home({
 }) {
   const { category, search } = await searchParams;
 
-  // =====================================================
-  // FETCH PRODUCTS
-  // =====================================================
+  const searchQuery = search?.trim() || "";
+  const categoryQuery = category?.trim() || "";
+
+  // =========================================================
+  // GET ALL PRODUCTS
+  // =========================================================
 
   const { data: allProducts, error } = await supabase
     .from("products")
@@ -65,39 +68,59 @@ export default async function Home({
 
   const allProductList = allProducts ?? [];
 
-  // =====================================================
-  // FILTER PRODUCTS
-  // =====================================================
+  // =========================================================
+  // CATEGORY FILTER
+  // =========================================================
 
-  const normalizedCategory = category?.trim().toLowerCase() || "";
-  const normalizedSearch = search?.trim().toLowerCase() || "";
+  let filteredProducts = allProductList;
 
-  const productList = allProductList.filter((product) => {
-    const matchesCategory =
-      !normalizedCategory ||
-      product.category?.trim().toLowerCase() === normalizedCategory;
+  if (categoryQuery) {
+    filteredProducts = filteredProducts.filter(
+      (product) =>
+        product.category?.toLowerCase() === categoryQuery.toLowerCase()
+    );
+  }
 
-    const productName = product.name?.toLowerCase() || "";
-    const productDescription =
-      product.description?.toLowerCase() || "";
+  // =========================================================
+  // SEARCH FILTER
+  // =========================================================
 
-    const matchesSearch =
-      !normalizedSearch ||
-      productName.includes(normalizedSearch) ||
-      productDescription.includes(normalizedSearch);
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
 
-    return matchesCategory && matchesSearch;
-  });
+    filteredProducts = filteredProducts.filter((product) => {
+      const name = product.name?.toLowerCase() || "";
+      const productCategory = product.category?.toLowerCase() || "";
+      const description = product.description?.toLowerCase() || "";
 
-  // =====================================================
+      return (
+        name.includes(query) ||
+        productCategory.includes(query) ||
+        description.includes(query)
+      );
+    });
+  }
+
+  // =========================================================
+  // HOMEPAGE = ONLY 4 FEATURED PRODUCTS
+  // CATEGORY / SEARCH = SHOW ALL MATCHING PRODUCTS
+  // =========================================================
+
+  const isFiltering = Boolean(categoryQuery || searchQuery);
+
+  const productList = isFiltering
+    ? filteredProducts
+    : filteredProducts.slice(0, 4);
+
+  // =========================================================
   // CATEGORY IMAGES
-  // =====================================================
+  // =========================================================
 
   const categoryCards = categories.map((item) => {
     const categoryProduct = allProductList.find(
       (product) =>
-        product.category?.trim().toLowerCase() ===
-          item.name.toLowerCase() && product.image
+        product.category?.toLowerCase() === item.name.toLowerCase() &&
+        product.image
     );
 
     return {
@@ -106,34 +129,35 @@ export default async function Home({
     };
   });
 
-  // =====================================================
+  // =========================================================
   // ACTIVE CATEGORY
-  // =====================================================
+  // =========================================================
 
   const activeCategory = categories.find(
-    (item) =>
-      item.name.toLowerCase() === normalizedCategory
+    (item) => item.name.toLowerCase() === categoryQuery.toLowerCase()
   );
 
-  // =====================================================
-  // RETURN
-  // =====================================================
+  // =========================================================
+  // PAGE
+  // =========================================================
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] text-zinc-900">
 
-      {/* =====================================================
-          NAVBAR
-      ===================================================== */}
+      {/* ===================================================== */}
+      {/* NAVBAR */}
+      {/* ===================================================== */}
 
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 backdrop-blur-xl">
+
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
 
             {/* LOGO */}
 
-            <a href="/" className="block">
+            <a href="/" className="block shrink-0">
+
               <h1 className="text-base font-bold tracking-tight sm:text-xl">
                 DAYAL KITCHEN WARE
               </h1>
@@ -141,13 +165,16 @@ export default async function Home({
               <p className="text-[8px] uppercase tracking-[0.2em] text-zinc-500 sm:text-[10px]">
                 Kitchen • Home • Lifestyle
               </p>
+
             </a>
 
+            {/* ================================================= */}
             {/* DESKTOP NAV */}
+            {/* ================================================= */}
 
-            <div className="hidden items-center gap-8 md:flex">
+            <div className="hidden items-center gap-5 md:flex">
 
-              <nav className="flex items-center gap-8 text-sm font-medium">
+              <nav className="flex items-center gap-6 text-sm font-medium lg:gap-8">
 
                 <a
                   href="#home"
@@ -186,6 +213,52 @@ export default async function Home({
 
               </nav>
 
+              {/* SEARCH BAR */}
+
+              <form
+                action="/"
+                method="GET"
+                className="relative"
+              >
+
+                <div className="flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 transition-all focus-within:border-zinc-400 focus-within:bg-white focus-within:shadow-sm">
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 shrink-0 text-zinc-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                    />
+                  </svg>
+
+                  <input
+                    type="search"
+                    name="search"
+                    defaultValue={searchQuery}
+                    placeholder="Search products..."
+                    className="w-36 bg-transparent px-2.5 py-2 text-sm outline-none placeholder:text-zinc-400 lg:w-44"
+                  />
+
+                  <button
+                    type="submit"
+                    className="rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
+                  >
+                    Search
+                  </button>
+
+                </div>
+
+              </form>
+
+              {/* WHATSAPP */}
+
               <a
                 href={whatsappLink}
                 target="_blank"
@@ -197,7 +270,9 @@ export default async function Home({
 
             </div>
 
+            {/* ================================================= */}
             {/* MOBILE MENU */}
+            {/* ================================================= */}
 
             <details className="relative md:hidden">
 
@@ -220,7 +295,7 @@ export default async function Home({
 
               </summary>
 
-              <div className="absolute right-0 top-12 w-60 rounded-2xl border border-zinc-200 bg-white p-3 shadow-xl">
+              <div className="absolute right-0 top-12 w-72 rounded-2xl border border-zinc-200 bg-white p-3 shadow-xl">
 
                 <nav className="flex flex-col">
 
@@ -259,11 +334,55 @@ export default async function Home({
                     Contact
                   </a>
 
+                  {/* MOBILE SEARCH */}
+
+                  <form
+                    action="/"
+                    method="GET"
+                    className="mt-2"
+                  >
+
+                    <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-50 px-3">
+
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 shrink-0 text-zinc-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                        />
+                      </svg>
+
+                      <input
+                        type="search"
+                        name="search"
+                        defaultValue={searchQuery}
+                        placeholder="Search products..."
+                        className="min-w-0 flex-1 bg-transparent px-2.5 py-3 text-sm outline-none"
+                      />
+
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white"
+                      >
+                        Go
+                      </button>
+
+                    </div>
+
+                  </form>
+
                   <a
                     href={whatsappLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 rounded-full bg-green-600 px-5 py-3 text-center text-sm font-semibold text-white"
+                    className="mt-3 rounded-full bg-green-600 px-5 py-3 text-center text-sm font-semibold text-white"
                   >
                     WhatsApp Us
                   </a>
@@ -275,374 +394,253 @@ export default async function Home({
             </details>
 
           </div>
+
         </div>
+
       </header>
 
-      {/* =====================================================
-          HERO
-      ===================================================== */}
+      {!searchQuery && (
+  <>
+    {/* HERO */}
+    <section
+      id="home"
+      className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
+    >
+      <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
 
-      <section
-        id="home"
-        className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
-      >
+        {/* HERO TEXT */}
+        <div className="animate-[fadeInUp_0.7s_ease-out]">
 
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm sm:tracking-[0.2em]">
+            Quality kitchenware for every home
+          </p>
 
-          {/* HERO TEXT */}
+          <h2 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+            Everything your
+            <br />
+            kitchen needs.
+            <br />
 
-          <div className="animate-[fadeInUp_0.7s_ease-out]">
+            <span className="text-amber-700">
+              Made for everyday.
+            </span>
+          </h2>
 
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm sm:tracking-[0.2em]">
-              Quality kitchenware for every home
-            </p>
+          <p className="mt-5 max-w-xl text-base leading-7 text-zinc-600 sm:mt-6 sm:text-lg sm:leading-8">
+            Discover beautiful, practical and reliable kitchenware
+            designed for everyday cooking and modern homes.
+          </p>
 
-            <h2 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-              Everything your
-              <br />
-              kitchen needs.
-              <br />
+          <div className="mt-7 flex flex-wrap gap-3 sm:mt-8 sm:gap-4">
 
-              <span className="text-amber-700">
-                Made for everyday.
-              </span>
-            </h2>
+            <a
+              href="#categories"
+              className="rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-amber-700 hover:shadow-lg sm:px-7"
+            >
+              Explore Collection →
+            </a>
 
-            <p className="mt-5 max-w-xl text-base leading-7 text-zinc-600 sm:mt-6 sm:text-lg sm:leading-8">
-              Discover beautiful, practical and reliable kitchenware
-              designed for everyday cooking and modern homes.
-            </p>
-
-            <div className="mt-7 flex flex-wrap gap-3 sm:mt-8 sm:gap-4">
-
-              <a
-                href="#categories"
-                className="rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-amber-700 hover:shadow-lg sm:px-7"
-              >
-                Explore Collection →
-              </a>
-
-              <a
-                href="#about"
-                className="rounded-full border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm sm:px-7"
-              >
-                Learn More
-              </a>
-
-            </div>
+            <a
+              href="#about"
+              className="rounded-full border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm sm:px-7"
+            >
+              Learn More
+            </a>
 
           </div>
 
-          {/* HERO IMAGE */}
+        </div>
 
-          <div className="relative min-h-[360px] overflow-hidden rounded-[2.5rem] bg-[#e8e0d2] shadow-sm sm:min-h-[500px]">
+        {/* HERO IMAGE */}
+        <div className="relative min-h-[360px] overflow-hidden rounded-[2.5rem] bg-[#e8e0d2] shadow-sm sm:min-h-[500px]">
 
-            <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-200/40 blur-3xl" />
+          <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-200/40 blur-3xl" />
 
-            <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/60 blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/60 blur-3xl" />
 
-            <div className="relative flex h-full min-h-[360px] items-center justify-center p-8 sm:min-h-[500px]">
+          <div className="relative flex h-full min-h-[360px] items-center justify-center p-8 sm:min-h-[500px]">
 
-              {allProductList[0]?.image ? (
-
-                <img
-                  src={allProductList[0].image}
-                  alt={allProductList[0].name}
-                  className="max-h-[300px] w-auto max-w-[90%] object-contain drop-shadow-2xl transition-transform duration-700 hover:scale-105 sm:max-h-[410px]"
-                />
-
-              ) : (
-
-                <div className="text-7xl sm:text-9xl">
-                  🍳
-                </div>
-
-              )}
-
-            </div>
-
-            <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-7 sm:px-5 sm:py-4">
-
-              <div>
-
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-700 sm:text-[10px]">
-                  Featured Kitchenware
-                </p>
-
-                <p className="mt-1 max-w-[190px] truncate text-sm font-semibold text-zinc-800 sm:max-w-xs">
-                  {allProductList[0]?.name || "Cook • Serve • Enjoy"}
-                </p>
-
+            {allProductList[0]?.image ? (
+              <img
+                src={allProductList[0].image}
+                alt={allProductList[0].name}
+                className="max-h-[300px] w-auto max-w-[90%] object-contain drop-shadow-2xl transition-transform duration-700 hover:scale-105 sm:max-h-[410px]"
+              />
+            ) : (
+              <div className="text-7xl sm:text-9xl">
+                🍳
               </div>
-
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
-                →
-              </span>
-
-            </div>
+            )}
 
           </div>
 
-        </div>
-
-      </section>
-
-      {/* =====================================================
-          SHOP BY CATEGORY
-      ===================================================== */}
-
-      <section
-        id="categories"
-        className="border-t border-black/5 bg-[#faf9f6] py-16 sm:py-20"
-      >
-
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-          <div className="max-w-2xl">
-
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
-              Explore our collection
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Shop by Category
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-zinc-500 sm:text-base">
-              Find the right essentials for cooking, serving and everyday living.
-            </p>
-
-          </div>
-
-          {/* CATEGORY GRID */}
-
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:mt-10 sm:grid-cols-4 sm:gap-6">
-
-            {categoryCards.map((item) => {
-
-              const isActive =
-                normalizedCategory === item.name.toLowerCase();
-
-              return (
-
-                <a
-                  key={item.name}
-                  href={`/?category=${encodeURIComponent(item.name)}#products`}
-                  className={`group relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${
-                    isActive
-                      ? "border-amber-600 ring-2 ring-amber-100"
-                      : "border-zinc-200"
-                  }`}
-                >
-
-                  {/* IMAGE */}
-
-                  <div className="relative h-40 overflow-hidden bg-[#eee8dc] sm:h-52">
-
-                    {item.image ? (
-
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="h-full w-full object-contain p-6 drop-shadow-lg transition-transform duration-700 ease-out group-hover:scale-110"
-                      />
-
-                    ) : (
-
-                      <div className="flex h-full items-center justify-center text-6xl sm:text-7xl">
-                        {item.fallback}
-                      </div>
-
-                    )}
-
-                    <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover:bg-black/5" />
-
-                    <div className="absolute right-4 top-4 flex h-9 w-9 translate-y-2 items-center justify-center rounded-full bg-white/90 text-sm font-bold opacity-0 shadow-md backdrop-blur transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-                      ↗
-                    </div>
-
-                  </div>
-
-                  {/* CARD CONTENT */}
-
-                  <div className="p-4 sm:p-6">
-
-                    <div className="flex items-center justify-between gap-2">
-
-                      <h3 className="text-base font-bold sm:text-lg">
-                        {item.title}
-                      </h3>
-
-                      {isActive && (
-                        <span className="rounded-full bg-amber-100 px-2 py-1 text-[9px] font-bold text-amber-800">
-                          ACTIVE
-                        </span>
-                      )}
-
-                    </div>
-
-                    <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm">
-                      {item.description}
-                    </p>
-
-                    <span className="mt-4 inline-block text-xs font-semibold text-amber-700 transition-transform duration-300 group-hover:translate-x-1">
-                      Explore →
-                    </span>
-
-                  </div>
-
-                </a>
-
-              );
-
-            })}
-
-          </div>
-
-        </div>
-
-      </section>
-
-      {/* =====================================================
-          PRODUCTS
-      ===================================================== */}
-
-      <section
-        id="products"
-        className="scroll-mt-24 border-t border-black/5 bg-white py-16 sm:py-20"
-      >
-
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-          {/* PRODUCT HEADER */}
-
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-7 sm:px-5 sm:py-4">
 
             <div>
 
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
-
-                {activeCategory
-                  ? activeCategory.title
-                  : search
-                  ? "Search Results"
-                  : "Customer favourites"}
-
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-700 sm:text-[10px]">
+                Featured Kitchenware
               </p>
 
-              <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-
-                {activeCategory
-                  ? `${activeCategory.title} Collection`
-                  : search
-                  ? `Results for "${search}"`
-                  : "Featured Products"}
-
-              </h2>
-
-              <p className="mt-3 text-sm text-zinc-500 sm:text-base">
-
-                {activeCategory
-                  ? `Showing products from ${activeCategory.title}.`
-                  : search
-                  ? `Found ${productList.length} product${
-                      productList.length === 1 ? "" : "s"
-                    }.`
-                  : "Explore our popular kitchen essentials."}
-
+              <p className="mt-1 max-w-[190px] truncate text-sm font-semibold text-zinc-800 sm:max-w-xs">
+                {allProductList[0]?.name || "Cook • Serve • Enjoy"}
               </p>
 
             </div>
 
-            {(category || search) && (
-
-              <a
-                href="/#products"
-                className="w-fit rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
-              >
-                Clear Filters
-              </a>
-
-            )}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
+              →
+            </span>
 
           </div>
 
-          {/* =================================================
-              SEARCH
-          ================================================= */}
+        </div>
 
-          <form
-            action="/"
-            method="GET"
-            className="mt-7 flex w-full max-w-2xl gap-2"
-          >
+      </div>
+    </section>
 
-            {category && (
-              <input
-                type="hidden"
-                name="category"
-                value={category}
-              />
-            )}
+    {/* CATEGORIES */}
+    <section
+      id="categories"
+      className="border-t border-black/5 bg-[#faf9f6] py-16 sm:py-20"
+    >
 
-            <div className="relative flex-1">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-              <input
-                type="search"
-                name="search"
-                defaultValue={search ?? ""}
-                placeholder="Search products..."
-                className="w-full rounded-full border border-zinc-200 bg-white px-5 py-3.5 pr-12 text-sm outline-none transition-all focus:border-amber-600 focus:ring-4 focus:ring-amber-100"
-              />
+        <div className="max-w-2xl">
 
-              <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400">
-                🔍
-              </span>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
+            Explore our collection
+          </p>
 
-            </div>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            Shop by Category
+          </h2>
 
-            <button
-              type="submit"
-              className="rounded-full bg-zinc-900 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-amber-700 hover:shadow-lg"
+          <p className="mt-3 text-sm leading-6 text-zinc-500 sm:text-base">
+            Find the right essentials for cooking, serving and everyday living.
+          </p>
+
+        </div>
+
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:mt-10 sm:grid-cols-4 sm:gap-6">
+
+          {categoryCards.map((item) => (
+
+            <a
+              key={item.name}
+              href={`/?category=${encodeURIComponent(item.name)}#products`}
+              className="group relative overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
             >
-              Search
-            </button>
 
-          </form>
+              <div className="relative h-40 overflow-hidden bg-[#eee8dc] sm:h-52">
 
-          {/* ACTIVE FILTERS */}
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="h-full w-full object-contain p-6 drop-shadow-lg transition-transform duration-700 ease-out group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-6xl sm:text-7xl">
+                    {item.fallback}
+                  </div>
+                )}
 
-          {(category || search) && (
+                <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover:bg-black/5" />
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="absolute right-4 top-4 flex h-9 w-9 translate-y-2 items-center justify-center rounded-full bg-white/90 text-sm font-bold opacity-0 shadow-md backdrop-blur transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                  ↗
+                </div>
 
-              <span className="text-sm text-zinc-500">
-                Filters:
-              </span>
+              </div>
 
-              {category && (
+              <div className="p-4 sm:p-6">
 
-                <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800">
-                  {activeCategory?.title || category}
+                <h3 className="text-base font-bold sm:text-lg">
+                  {item.title}
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm">
+                  {item.description}
+                </p>
+
+                <span className="mt-4 inline-block text-xs font-semibold text-amber-700 transition-transform duration-300 group-hover:translate-x-1">
+                  Explore →
                 </span>
 
-              )}
+              </div>
 
-              {search && (
+            </a>
 
-                <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700">
-                  "{search}"
-                </span>
+          ))}
 
-              )}
+        </div>
 
-            </div>
+      </div>
 
-          )}
+    </section>
+  </>
+)}
+      {/* ===================================================== */}
+      {/* PRODUCTS */}
+      {/* ===================================================== */}
 
-          {/* =================================================
-              PRODUCT GRID
-          ================================================= */}
+      <section
+        id="products"
+        className="border-t border-black/5 bg-white py-16 sm:py-20"
+      >
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+          {/* HEADER */}
+
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+
+  <div>
+
+    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
+      {searchQuery
+        ? "Search Results"
+        : activeCategory
+          ? activeCategory.title
+          : "Customer favourites"}
+    </p>
+
+    <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+      {searchQuery
+        ? `Results for "${searchQuery}"`
+        : activeCategory
+          ? `${activeCategory.title} Collection`
+          : "Featured Products"}
+    </h2>
+
+    <p className="mt-3 text-sm text-zinc-500 sm:text-base">
+      {searchQuery
+        ? `${productList.length} product${
+            productList.length === 1 ? "" : "s"
+          } found.`
+        : activeCategory
+          ? `Showing all products from ${activeCategory.title}.`
+          : "Explore our popular kitchen essentials."}
+    </p>
+
+  </div>
+
+  {isFiltering && (
+    <a
+      href="/#products"
+      className="w-fit rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
+    >
+      View Featured Products
+    </a>
+  )}
+
+</div>
+
+          {/* ================================================= */}
+          {/* PRODUCT GRID */}
+          {/* ================================================= */}
 
           {productList.length > 0 ? (
 
@@ -661,16 +659,12 @@ export default async function Home({
                   className="group w-[82vw] min-w-[82vw] snap-start overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl sm:w-auto sm:min-w-0"
                 >
 
-                  {/* PRODUCT IMAGE */}
-
                   <ProductCardImage
                     name={product.name}
                     image={product.image}
                     images={product.images}
                     badge={product.badge}
                   />
-
-                  {/* PRODUCT DETAILS */}
 
                   <div className="flex min-h-[320px] flex-col p-5 sm:p-6">
 
@@ -696,8 +690,6 @@ export default async function Home({
                     >
                       {product.name}
                     </a>
-
-                    {/* PRICE */}
 
                     <div className="mt-4 flex flex-wrap items-center gap-3">
 
@@ -731,8 +723,6 @@ export default async function Home({
 
                     </div>
 
-                    {/* DESCRIPTION */}
-
                     {product.description && (
 
                       <p className="mt-4 line-clamp-3 text-sm leading-6 text-zinc-500">
@@ -740,8 +730,6 @@ export default async function Home({
                       </p>
 
                     )}
-
-                    {/* ACTIONS */}
 
                     <div className="mt-auto pt-6">
 
@@ -783,8 +771,6 @@ Please share more details and availability.`
 
           ) : (
 
-            /* NO PRODUCTS */
-
             <div className="mt-10 rounded-3xl border border-dashed border-zinc-300 p-10 text-center">
 
               <div className="text-5xl">
@@ -796,14 +782,14 @@ Please share more details and availability.`
               </h3>
 
               <p className="mt-2 text-sm text-zinc-500">
-                Try another product name or category.
+                Try searching with a different product name or category.
               </p>
 
               <a
                 href="/#products"
-                className="mt-5 inline-block rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+                className="mt-5 inline-block rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white"
               >
-                View All Products
+                View Featured Products
               </a>
 
             </div>
@@ -814,9 +800,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* =====================================================
-          ABOUT
-      ===================================================== */}
+      {/* ===================================================== */}
+      {/* ABOUT */}
+      {/* ===================================================== */}
 
       <section
         id="about"
@@ -844,9 +830,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* =====================================================
-          CONTACT
-      ===================================================== */}
+      {/* ===================================================== */}
+      {/* CONTACT */}
+      {/* ===================================================== */}
 
       <section
         id="contact"
@@ -881,9 +867,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* =====================================================
-          FOOTER
-      ===================================================== */}
+      {/* ===================================================== */}
+      {/* FOOTER */}
+      {/* ===================================================== */}
 
       <footer className="bg-zinc-950 py-10 text-white">
 
