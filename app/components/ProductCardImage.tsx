@@ -44,6 +44,7 @@ export default function ProductCardImage({
   return (
     <div
       className="
+        group
         relative
         flex
         h-[260px]
@@ -51,7 +52,7 @@ export default function ProductCardImage({
         items-center
         justify-center
         overflow-hidden
-        bg-[#eee8dc]
+        bg-white
 
         sm:h-64
         lg:h-72
@@ -69,7 +70,7 @@ export default function ProductCardImage({
             top-4
             z-10
             rounded-full
-            bg-white
+            bg-white/95
             px-3
             py-1.5
             text-[9px]
@@ -77,6 +78,7 @@ export default function ProductCardImage({
             tracking-wider
             text-zinc-800
             shadow-sm
+            backdrop-blur-sm
           "
         >
           {badge}
@@ -95,11 +97,11 @@ export default function ProductCardImage({
             h-full
             w-full
             object-contain
-            p-5
-            transition-all
+            p-3
+            transition-transform
             duration-500
             ease-out
-            group-hover:scale-105
+            group-hover:scale-[1.04]
           "
         />
       ) : (
@@ -113,7 +115,7 @@ export default function ProductCardImage({
       {/* IMAGE INDICATOR */}
 
       {productImages.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-white/80 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
           {productImages.slice(0, 5).map((_, index) => (
             <span
               key={index}
