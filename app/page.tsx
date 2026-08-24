@@ -46,12 +46,17 @@ export default async function Home({
   searchParams: Promise<{
     category?: string;
     search?: string;
+    showAll?: string;
   }>;
 }) {
-  const { category, search } = await searchParams;
+  const {
+    category: categoryQuery,
+    search: searchQuery,
+    showAll,
+  } = await searchParams;
 
-  const searchQuery = search?.trim() || "";
-  const categoryQuery = category?.trim() || "";
+  const cleanSearchQuery = searchQuery?.trim() || "";
+  const cleanCategoryQuery = categoryQuery?.trim() || "";
 
   // =========================================================
   // GET ALL PRODUCTS
@@ -74,10 +79,11 @@ export default async function Home({
 
   let filteredProducts = allProductList;
 
-  if (categoryQuery) {
+  if (cleanCategoryQuery) {
     filteredProducts = filteredProducts.filter(
       (product) =>
-        product.category?.toLowerCase() === categoryQuery.toLowerCase()
+        product.category?.toLowerCase() ===
+        cleanCategoryQuery.toLowerCase()
     );
   }
 
@@ -85,8 +91,8 @@ export default async function Home({
   // SEARCH FILTER
   // =========================================================
 
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
+  if (cleanSearchQuery) {
+    const query = cleanSearchQuery.toLowerCase();
 
     filteredProducts = filteredProducts.filter((product) => {
       const name = product.name?.toLowerCase() || "";
@@ -102,15 +108,25 @@ export default async function Home({
   }
 
   // =========================================================
-  // HOMEPAGE = ONLY 4 FEATURED PRODUCTS
-  // CATEGORY / SEARCH = SHOW ALL MATCHING PRODUCTS
+  // PRODUCT DISPLAY LOGIC
+  //
+  // Homepage              = 4 products
+  // View More             = All products
+  // Category              = All matching products
+  // Search                = All matching products
   // =========================================================
 
-  const isFiltering = Boolean(categoryQuery || searchQuery);
+  const isFiltering = Boolean(
+    cleanCategoryQuery || cleanSearchQuery
+  );
 
-  const productList = isFiltering
-    ? filteredProducts
-    : filteredProducts.slice(0, 4);
+  const showAllProducts =
+    showAll === "true" && !isFiltering;
+
+  const productList =
+    isFiltering || showAllProducts
+      ? filteredProducts
+      : filteredProducts.slice(0, 4);
 
   // =========================================================
   // CATEGORY IMAGES
@@ -119,7 +135,8 @@ export default async function Home({
   const categoryCards = categories.map((item) => {
     const categoryProduct = allProductList.find(
       (product) =>
-        product.category?.toLowerCase() === item.name.toLowerCase() &&
+        product.category?.toLowerCase() ===
+          item.name.toLowerCase() &&
         product.image
     );
 
@@ -134,7 +151,9 @@ export default async function Home({
   // =========================================================
 
   const activeCategory = categories.find(
-    (item) => item.name.toLowerCase() === categoryQuery.toLowerCase()
+    (item) =>
+      item.name.toLowerCase() ===
+      cleanCategoryQuery.toLowerCase()
   );
 
   // =========================================================
@@ -241,7 +260,7 @@ export default async function Home({
                   <input
                     type="search"
                     name="search"
-                    defaultValue={searchQuery}
+                    defaultValue={cleanSearchQuery}
                     placeholder="Search products..."
                     className="w-36 bg-transparent px-2.5 py-2 text-sm outline-none placeholder:text-zinc-400 lg:w-44"
                   />
@@ -362,7 +381,7 @@ export default async function Home({
                       <input
                         type="search"
                         name="search"
-                        defaultValue={searchQuery}
+                        defaultValue={cleanSearchQuery}
                         placeholder="Search products..."
                         className="min-w-0 flex-1 bg-transparent px-2.5 py-3 text-sm outline-none"
                       />
@@ -399,189 +418,222 @@ export default async function Home({
 
       </header>
 
-      {!searchQuery && (
-  <>
-    {/* HERO */}
-    <section
-      id="home"
-      className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
-    >
-      <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      {/* ===================================================== */}
+      {/* HERO + CATEGORIES */}
+      {/* ===================================================== */}
 
-        {/* HERO TEXT */}
-        <div className="animate-[fadeInUp_0.7s_ease-out]">
+      {!cleanSearchQuery && (
+        <>
 
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm sm:tracking-[0.2em]">
-            Quality kitchenware for every home
-          </p>
+          {/* ================================================= */}
+          {/* HERO */}
+          {/* ================================================= */}
 
-          <h2 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-            Everything your
-            <br />
-            kitchen needs.
-            <br />
+          <section
+            id="home"
+            className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
+          >
 
-            <span className="text-amber-700">
-              Made for everyday.
-            </span>
-          </h2>
+            <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
 
-          <p className="mt-5 max-w-xl text-base leading-7 text-zinc-600 sm:mt-6 sm:text-lg sm:leading-8">
-            Discover beautiful, practical and reliable kitchenware
-            designed for everyday cooking and modern homes.
-          </p>
+              {/* HERO TEXT */}
 
-          <div className="mt-7 flex flex-wrap gap-3 sm:mt-8 sm:gap-4">
+              <div className="animate-[fadeInUp_0.7s_ease-out]">
 
-            <a
-              href="#categories"
-              className="rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-amber-700 hover:shadow-lg sm:px-7"
-            >
-              Explore Collection →
-            </a>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm sm:tracking-[0.2em]">
+                  Quality kitchenware for every home
+                </p>
 
-            <a
-              href="#about"
-              className="rounded-full border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm sm:px-7"
-            >
-              Learn More
-            </a>
+                <h2 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
 
-          </div>
+                  Everything your
+                  <br />
 
-        </div>
+                  kitchen needs.
+                  <br />
 
-        {/* HERO IMAGE */}
-        <div className="relative min-h-[360px] overflow-hidden rounded-[2.5rem] bg-[#e8e0d2] shadow-sm sm:min-h-[500px]">
+                  <span className="text-amber-700">
+                    Made for everyday.
+                  </span>
 
-          <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-200/40 blur-3xl" />
+                </h2>
 
-          <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/60 blur-3xl" />
+                <p className="mt-5 max-w-xl text-base leading-7 text-zinc-600 sm:mt-6 sm:text-lg sm:leading-8">
+                  Discover beautiful, practical and reliable
+                  kitchenware designed for everyday cooking and
+                  modern homes.
+                </p>
 
-          <div className="relative flex h-full min-h-[360px] items-center justify-center p-8 sm:min-h-[500px]">
+                <div className="mt-7 flex flex-wrap gap-3 sm:mt-8 sm:gap-4">
 
-            {allProductList[0]?.image ? (
-              <img
-                src={allProductList[0].image}
-                alt={allProductList[0].name}
-                className="max-h-[300px] w-auto max-w-[90%] object-contain drop-shadow-2xl transition-transform duration-700 hover:scale-105 sm:max-h-[410px]"
-              />
-            ) : (
-              <div className="text-7xl sm:text-9xl">
-                🍳
-              </div>
-            )}
+                  <a
+                    href="#categories"
+                    className="rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-amber-700 hover:shadow-lg sm:px-7"
+                  >
+                    Explore Collection →
+                  </a>
 
-          </div>
+                  <a
+                    href="#about"
+                    className="rounded-full border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm sm:px-7"
+                  >
+                    Learn More
+                  </a>
 
-          <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-7 sm:px-5 sm:py-4">
-
-            <div>
-
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-700 sm:text-[10px]">
-                Featured Kitchenware
-              </p>
-
-              <p className="mt-1 max-w-[190px] truncate text-sm font-semibold text-zinc-800 sm:max-w-xs">
-                {allProductList[0]?.name || "Cook • Serve • Enjoy"}
-              </p>
-
-            </div>
-
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
-              →
-            </span>
-
-          </div>
-
-        </div>
-
-      </div>
-    </section>
-
-    {/* CATEGORIES */}
-    <section
-      id="categories"
-      className="border-t border-black/5 bg-[#faf9f6] py-16 sm:py-20"
-    >
-
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        <div className="max-w-2xl">
-
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
-            Explore our collection
-          </p>
-
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            Shop by Category
-          </h2>
-
-          <p className="mt-3 text-sm leading-6 text-zinc-500 sm:text-base">
-            Find the right essentials for cooking, serving and everyday living.
-          </p>
-
-        </div>
-
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:mt-10 sm:grid-cols-4 sm:gap-6">
-
-          {categoryCards.map((item) => (
-
-            <a
-              key={item.name}
-              href={`/?category=${encodeURIComponent(item.name)}#products`}
-              className="group relative overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
-            >
-
-              <div className="relative h-40 overflow-hidden bg-[#eee8dc] sm:h-52">
-
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="h-full w-full object-contain p-6 drop-shadow-lg transition-transform duration-700 ease-out group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-6xl sm:text-7xl">
-                    {item.fallback}
-                  </div>
-                )}
-
-                <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover:bg-black/5" />
-
-                <div className="absolute right-4 top-4 flex h-9 w-9 translate-y-2 items-center justify-center rounded-full bg-white/90 text-sm font-bold opacity-0 shadow-md backdrop-blur transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-                  ↗
                 </div>
 
               </div>
 
-              <div className="p-4 sm:p-6">
+              {/* HERO IMAGE */}
 
-                <h3 className="text-base font-bold sm:text-lg">
-                  {item.title}
-                </h3>
+              <div className="relative min-h-[360px] overflow-hidden rounded-[2.5rem] bg-[#e8e0d2] shadow-sm sm:min-h-[500px]">
 
-                <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm">
-                  {item.description}
-                </p>
+                <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-200/40 blur-3xl" />
 
-                <span className="mt-4 inline-block text-xs font-semibold text-amber-700 transition-transform duration-300 group-hover:translate-x-1">
-                  Explore →
-                </span>
+                <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/60 blur-3xl" />
+
+                <div className="relative flex h-full min-h-[360px] items-center justify-center p-8 sm:min-h-[500px]">
+
+                  {allProductList[0]?.image ? (
+
+                    <img
+                      src={allProductList[0].image}
+                      alt={allProductList[0].name}
+                      className="max-h-[300px] w-auto max-w-[90%] object-contain drop-shadow-2xl transition-transform duration-700 hover:scale-105 sm:max-h-[410px]"
+                    />
+
+                  ) : (
+
+                    <div className="text-7xl sm:text-9xl">
+                      🍳
+                    </div>
+
+                  )}
+
+                </div>
+
+                <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-7 sm:px-5 sm:py-4">
+
+                  <div>
+
+                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-700 sm:text-[10px]">
+                      Featured Kitchenware
+                    </p>
+
+                    <p className="mt-1 max-w-[190px] truncate text-sm font-semibold text-zinc-800 sm:max-w-xs">
+                      {allProductList[0]?.name ||
+                        "Cook • Serve • Enjoy"}
+                    </p>
+
+                  </div>
+
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
+                    →
+                  </span>
+
+                </div>
 
               </div>
 
-            </a>
+            </div>
 
-          ))}
+          </section>
 
-        </div>
+          {/* ================================================= */}
+          {/* CATEGORIES */}
+          {/* ================================================= */}
 
-      </div>
+          <section
+            id="categories"
+            className="border-t border-black/5 bg-[#faf9f6] py-16 sm:py-20"
+          >
 
-    </section>
-  </>
-)}
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+              <div className="max-w-2xl">
+
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
+                  Explore our collection
+                </p>
+
+                <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+                  Shop by Category
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-zinc-500 sm:text-base">
+                  Find the right essentials for cooking, serving
+                  and everyday living.
+                </p>
+
+              </div>
+
+              <div className="mt-8 grid grid-cols-2 gap-4 sm:mt-10 sm:grid-cols-4 sm:gap-6">
+
+                {categoryCards.map((item) => (
+
+                  <a
+                    key={item.name}
+                    href={`/?category=${encodeURIComponent(
+                      item.name
+                    )}#products`}
+                    className="group relative overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
+                  >
+
+                    <div className="relative h-40 overflow-hidden bg-[#eee8dc] sm:h-52">
+
+                      {item.image ? (
+
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="h-full w-full object-contain p-6 drop-shadow-lg transition-transform duration-700 ease-out group-hover:scale-110"
+                        />
+
+                      ) : (
+
+                        <div className="flex h-full items-center justify-center text-6xl sm:text-7xl">
+                          {item.fallback}
+                        </div>
+
+                      )}
+
+                      <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover:bg-black/5" />
+
+                      <div className="absolute right-4 top-4 flex h-9 w-9 translate-y-2 items-center justify-center rounded-full bg-white/90 text-sm font-bold opacity-0 shadow-md backdrop-blur transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                        ↗
+                      </div>
+
+                    </div>
+
+                    <div className="p-4 sm:p-6">
+
+                      <h3 className="text-base font-bold sm:text-lg">
+                        {item.title}
+                      </h3>
+
+                      <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm">
+                        {item.description}
+                      </p>
+
+                      <span className="mt-4 inline-block text-xs font-semibold text-amber-700 transition-transform duration-300 group-hover:translate-x-1">
+                        Explore →
+                      </span>
+
+                    </div>
+
+                  </a>
+
+                ))}
+
+              </div>
+
+            </div>
+
+          </section>
+
+        </>
+      )}
+
       {/* ===================================================== */}
       {/* PRODUCTS */}
       {/* ===================================================== */}
@@ -593,50 +645,79 @@ export default async function Home({
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-          {/* HEADER */}
+          {/* ================================================= */}
+          {/* PRODUCTS HEADER */}
+          {/* ================================================= */}
 
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
 
-  <div>
+            <div>
 
-    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
-      {searchQuery
-        ? "Search Results"
-        : activeCategory
-          ? activeCategory.title
-          : "Customer favourites"}
-    </p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
 
-    <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-      {searchQuery
-        ? `Results for "${searchQuery}"`
-        : activeCategory
-          ? `${activeCategory.title} Collection`
-          : "Featured Products"}
-    </h2>
+                {cleanSearchQuery
+                  ? "Search Results"
+                  : activeCategory
+                    ? activeCategory.title
+                    : showAllProducts
+                      ? "Our Collection"
+                      : "Customer favourites"}
 
-    <p className="mt-3 text-sm text-zinc-500 sm:text-base">
-      {searchQuery
-        ? `${productList.length} product${
-            productList.length === 1 ? "" : "s"
-          } found.`
-        : activeCategory
-          ? `Showing all products from ${activeCategory.title}.`
-          : "Explore our popular kitchen essentials."}
-    </p>
+              </p>
 
-  </div>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
 
-  {isFiltering && (
-    <a
-      href="/#products"
-      className="w-fit rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
-    >
-      View Featured Products
-    </a>
-  )}
+                {cleanSearchQuery
+                  ? `Results for "${cleanSearchQuery}"`
+                  : activeCategory
+                    ? `${activeCategory.title} Collection`
+                    : showAllProducts
+                      ? "All Products"
+                      : "Featured Products"}
 
-</div>
+              </h2>
+
+              <p className="mt-3 text-sm text-zinc-500 sm:text-base">
+
+                {cleanSearchQuery
+                  ? `${productList.length} product${
+                      productList.length === 1 ? "" : "s"
+                    } found.`
+                  : activeCategory
+                    ? `Showing all products from ${activeCategory.title}.`
+                    : showAllProducts
+                      ? `Showing all ${productList.length} products.`
+                      : "Explore our popular kitchen essentials."}
+
+              </p>
+
+            </div>
+
+            {/* BACK TO FEATURED */}
+
+            {isFiltering && (
+
+              <a
+                href="/#products"
+                className="w-fit rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
+              >
+                View Featured Products
+              </a>
+
+            )}
+
+            {showAllProducts && (
+
+              <a
+                href="/#products"
+                className="w-fit rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
+              >
+                View Featured Products
+              </a>
+
+            )}
+
+          </div>
 
           {/* ================================================= */}
           {/* PRODUCT GRID */}
@@ -644,105 +725,117 @@ export default async function Home({
 
           {productList.length > 0 ? (
 
-            <div
-              className="mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:pb-0 lg:grid-cols-3"
-              style={{
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
-            >
+            <>
 
-              {productList.map((product) => (
+              <div
+                className="mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:pb-0 lg:grid-cols-3"
+                style={{
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                }}
+              >
 
-                <article
-                  key={product.id ?? product.slug}
-                  className="group w-[82vw] min-w-[82vw] snap-start overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl sm:w-auto sm:min-w-0"
-                >
+                {productList.map((product) => (
 
-                  <ProductCardImage
-                    name={product.name}
-                    image={product.image}
-                    images={product.images}
-                    badge={product.badge}
-                  />
+                  <article
+                    key={product.id ?? product.slug}
+                    className="group w-[82vw] min-w-[82vw] snap-start overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl sm:w-auto sm:min-w-0"
+                  >
 
-                  <div className="flex min-h-[320px] flex-col p-5 sm:p-6">
+                    <ProductCardImage
+                      name={product.name}
+                      image={product.image}
+                      images={product.images}
+                      badge={product.badge}
+                    />
 
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-h-[320px] flex-col p-5 sm:p-6">
 
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400 sm:text-xs">
-                        {product.category}
-                      </p>
+                      <div className="flex items-center justify-between gap-3">
 
-                      {product.badge && (
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400 sm:text-xs">
+                          {product.category}
+                        </p>
 
-                        <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-700">
-                          {product.badge}
-                        </span>
+                        {product.badge && (
 
-                      )}
-
-                    </div>
-
-                    <a
-                      href={`/products/${product.slug}`}
-                      className="mt-3 line-clamp-2 text-lg font-bold leading-6 tracking-tight transition duration-200 hover:text-amber-700 sm:text-xl"
-                    >
-                      {product.name}
-                    </a>
-
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-
-                      <span className="text-xl font-bold text-zinc-900">
-                        ₹{product.price}
-                      </span>
-
-                      {product.old_price !== null &&
-                        product.old_price !== undefined &&
-                        Number(product.old_price) > Number(product.price) && (
-
-                          <>
-
-                            <span className="text-sm text-zinc-400 line-through">
-                              ₹{product.old_price}
-                            </span>
-
-                            <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">
-                              {Math.round(
-                                ((Number(product.old_price) -
-                                  Number(product.price)) /
-                                  Number(product.old_price)) *
-                                  100
-                              )}
-                              % OFF
-                            </span>
-
-                          </>
+                          <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-700">
+                            {product.badge}
+                          </span>
 
                         )}
 
-                    </div>
-
-                    {product.description && (
-
-                      <p className="mt-4 line-clamp-3 text-sm leading-6 text-zinc-500">
-                        {product.description}
-                      </p>
-
-                    )}
-
-                    <div className="mt-auto pt-6">
+                      </div>
 
                       <a
                         href={`/products/${product.slug}`}
-                        className="block w-full rounded-full bg-zinc-900 py-3.5 text-center text-sm font-semibold text-white transition-all duration-300 hover:bg-amber-700 hover:shadow-lg"
+                        className="mt-3 line-clamp-2 text-lg font-bold leading-6 tracking-tight transition duration-200 hover:text-amber-700 sm:text-xl"
                       >
-                        View Product →
+                        {product.name}
                       </a>
 
-                      <a
-                        href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-                          `Hello Dayal Kitchen Ware 👋
+                      {/* PRICE */}
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+
+                        <span className="text-xl font-bold text-zinc-900">
+                          ₹{product.price}
+                        </span>
+
+                        {product.old_price !== null &&
+                          product.old_price !== undefined &&
+                          Number(product.old_price) >
+                            Number(product.price) && (
+
+                            <>
+
+                              <span className="text-sm text-zinc-400 line-through">
+                                ₹{product.old_price}
+                              </span>
+
+                              <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">
+
+                                {Math.round(
+                                  ((Number(product.old_price) -
+                                    Number(product.price)) /
+                                    Number(product.old_price)) *
+                                    100
+                                )}
+
+                                % OFF
+
+                              </span>
+
+                            </>
+
+                          )}
+
+                      </div>
+
+                      {/* DESCRIPTION */}
+
+                      {product.description && (
+
+                        <p className="mt-4 line-clamp-3 text-sm leading-6 text-zinc-500">
+                          {product.description}
+                        </p>
+
+                      )}
+
+                      {/* BUTTONS */}
+
+                      <div className="mt-auto pt-6">
+
+                        <a
+                          href={`/products/${product.slug}`}
+                          className="block w-full rounded-full bg-zinc-900 py-3.5 text-center text-sm font-semibold text-white transition-all duration-300 hover:bg-amber-700 hover:shadow-lg"
+                        >
+                          View Product →
+                        </a>
+
+                        <a
+                          href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                            `Hello Dayal Kitchen Ware 👋
 
 I am interested in:
 
@@ -751,25 +844,60 @@ ${product.name}
 Price: ₹${product.price}
 
 Please share more details and availability.`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 block w-full rounded-full border border-green-600 py-3 text-center text-sm font-semibold text-green-700 transition-all duration-300 hover:bg-green-600 hover:text-white hover:shadow-md"
-                      >
-                        Ask on WhatsApp
-                      </a>
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 block w-full rounded-full border border-green-600 py-3 text-center text-sm font-semibold text-green-700 transition-all duration-300 hover:bg-green-600 hover:text-white hover:shadow-md"
+                        >
+                          Ask on WhatsApp
+                        </a>
+
+                      </div>
 
                     </div>
 
+                  </article>
+
+                ))}
+
+              </div>
+
+              {/* ================================================= */}
+              {/* VIEW MORE PRODUCTS */}
+              {/* ================================================= */}
+
+              {!isFiltering &&
+                !showAllProducts &&
+                productList.length > 0 && (
+
+                  <div className="mt-10 flex justify-center sm:mt-12">
+
+                    <a
+                      href="/?showAll=true#products"
+                      className="group inline-flex items-center gap-3 rounded-full border border-zinc-900 bg-zinc-900 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-zinc-900/10 transition-all duration-300 hover:-translate-y-1 hover:border-amber-700 hover:bg-amber-700 hover:shadow-xl hover:shadow-amber-700/20"
+                    >
+
+                      <span>
+                        View More Products
+                      </span>
+
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition-transform duration-300 group-hover:translate-x-1 group-hover:bg-white/20">
+                        →
+                      </span>
+
+                    </a>
+
                   </div>
 
-                </article>
+                )}
 
-              ))}
-
-            </div>
+            </>
 
           ) : (
+
+            /* ================================================= */
+            /* NO PRODUCTS */
+            /* ================================================= */
 
             <div className="mt-10 rounded-3xl border border-dashed border-zinc-300 p-10 text-center">
 
