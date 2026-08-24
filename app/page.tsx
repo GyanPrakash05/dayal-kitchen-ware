@@ -1,8 +1,9 @@
 import { supabase } from "./lib/supabase";
-import ProductGallery from "@/app/components/ProductGallery";
+
+
 import ProductCardImage from "./components/ProductCardImage";
 
-import ScrollReveal from "./components/ScrollReveal";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -183,19 +184,21 @@ export default async function Home() {
 
           {/* HERO TEXT */}
 
-          <div>
+          <div className="animate-[fadeInUp_0.7s_ease-out]">
 
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm sm:tracking-[0.2em]">
               Quality kitchenware for every home
             </p>
 
-            <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-6xl">
-              Make your kitchen
-              <br />
-              <span className="text-amber-700">
-                feel like home.
-              </span>
-            </h2>
+       <h2 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+  Everything your
+  <br />
+  kitchen needs.
+  <br />
+  <span className="text-amber-700">
+    Made for everyday.
+  </span>
+</h2>
 
             <p className="mt-5 max-w-xl text-base leading-7 text-zinc-600 sm:mt-6 sm:text-lg sm:leading-8">
               Discover beautiful, practical and reliable kitchenware
@@ -223,26 +226,73 @@ export default async function Home() {
           </div>
 
 
-          {/* HERO VISUAL */}
+         {/* HERO VISUAL */}
 
-          <div className="flex min-h-[280px] items-center justify-center rounded-[2rem] bg-[#e8e0d2] sm:min-h-[400px]">
+<div className="relative min-h-[360px] overflow-hidden rounded-[2.5rem] bg-[#e8e0d2] shadow-sm sm:min-h-[500px]">
 
-            <div className="text-center">
+  {/* Decorative background */}
 
-              <div className="text-7xl sm:text-9xl">
-                🍳
-              </div>
+  <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-200/40 blur-3xl" />
 
-              <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-zinc-500 sm:text-sm">
-                Cook • Serve • Enjoy
-              </p>
+  <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/60 blur-3xl" />
 
-            </div>
 
-          </div>
+  {/* Main visual */}
 
-        </div>
+  <div className="relative flex h-full min-h-[360px] items-center justify-center p-8 sm:min-h-[500px]">
 
+    {productList[0]?.image ? (
+
+      <img
+        src={productList[0].image}
+        alt={productList[0].name}
+        className="
+          max-h-[300px]
+          w-auto
+          max-w-[90%]
+          object-contain
+          drop-shadow-2xl
+          transition-transform
+          duration-700
+          hover:scale-105
+          sm:max-h-[410px]
+        "
+      />
+
+    ) : (
+
+      <div className="text-7xl sm:text-9xl">
+        🍳
+      </div>
+
+    )}
+
+  </div>
+
+
+  {/* Floating label */}
+
+  <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-7 sm:px-5 sm:py-4">
+
+    <div>
+      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-700 sm:text-[10px]">
+        Featured Kitchenware
+      </p>
+
+      <p className="mt-1 max-w-[190px] truncate text-sm font-semibold text-zinc-800 sm:max-w-xs">
+        {productList[0]?.name || "Cook • Serve • Enjoy"}
+      </p>
+    </div>
+
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
+      →
+    </span>
+
+  </div>
+
+</div>
+
+  </div>
       </section>
 
 
