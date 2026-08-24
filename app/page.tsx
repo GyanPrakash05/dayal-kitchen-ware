@@ -1,5 +1,6 @@
 import { supabase } from "./lib/supabase";
 import ProductGallery from "@/app/components/ProductGallery";
+import ProductCardImage from "./components/ProductCardImage";
 
 import ScrollReveal from "./components/ScrollReveal";
 
@@ -331,82 +332,12 @@ export default async function Home() {
                   "
                 >
 
-                  {/* ================================================= */}
-                  {/* PRODUCT IMAGE */}
-                  {/* ================================================= */}
-
-                  <div
-                    className="
-                      relative
-                      flex
-                      h-[260px]
-                      w-full
-                      items-center
-                      justify-center
-                      overflow-hidden
-                      bg-[#eee8dc]
-
-                      sm:h-64
-                      lg:h-72
-                    "
-                  >
-
-                    {/* BADGE */}
-
-                    {product.badge && (
-                      <span
-                        className="
-                          absolute
-                          left-4
-                          top-4
-                          z-10
-                          rounded-full
-                          bg-white
-                          px-3
-                          py-1.5
-                          text-[9px]
-                          font-bold
-                          tracking-wider
-                          text-zinc-800
-                          shadow-sm
-                        "
-                      >
-                        {product.badge}
-                      </span>
-                    )}
-
-
-                    {/* IMAGE */}
-
-                    {product.image ? (
-
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        loading="lazy"
-                        className="
-                          block
-                          h-full
-                          w-full
-                          object-contain
-                          p-5
-                          transition-transform
-                          duration-500
-                          group-hover:scale-105
-                        "
-                      />
-
-                    ) : (
-
-                      <div className="flex h-full w-full items-center justify-center">
-                        <span className="text-6xl sm:text-7xl">
-                          🍳
-                        </span>
-                      </div>
-
-                    )}
-
-                  </div>
+                  <ProductCardImage
+  name={product.name}
+  image={product.image}
+  images={product.images}
+  badge={product.badge}
+/>
 
 
                   {/* ================================================= */}
