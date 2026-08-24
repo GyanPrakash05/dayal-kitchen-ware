@@ -371,14 +371,13 @@ export default async function Home() {
                     border-zinc-200
                     bg-white
                     shadow-sm
-                    transition
-                    duration-300
+                    transition-all duration-500
 
                     sm:w-auto
                     sm:min-w-0
 
-                    hover:-translate-y-1
-                    hover:shadow-xl
+                   hover:-translate-y-2
+                   hover:shadow-2xl
                   "
                 >
 
@@ -393,98 +392,114 @@ export default async function Home() {
                   {/* ================================================= */}
                   {/* PRODUCT DETAILS */}
                   {/* ================================================= */}
+<div className="flex min-h-[320px] flex-col p-5 sm:p-6">
 
-                  <div className="flex min-h-[310px] flex-col p-5 sm:p-6">
+  {/* CATEGORY + BADGE */}
 
-                    {/* CATEGORY */}
+  <div className="flex items-center justify-between gap-3">
 
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400 sm:text-xs">
-                      {product.category}
-                    </p>
+    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400 sm:text-xs">
+      {product.category}
+    </p>
 
+    {product.badge && (
+      <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-700">
+        {product.badge}
+      </span>
+    )}
 
-                    {/* PRODUCT NAME */}
-
-                    <a
-                      href={`/products/${product.slug}`}
-                      className="
-                        mt-2
-                        line-clamp-2
-                        text-lg
-                        font-bold
-                        leading-6
-                        transition
-                        hover:text-amber-700
-                        sm:text-xl
-                      "
-                    >
-                      {product.name}
-                    </a>
+  </div>
 
 
-                    {/* PRICE */}
+  {/* PRODUCT NAME */}
 
-                    <div className="mt-3 flex items-center gap-3">
-
-                      <span className="text-lg font-bold">
-                        ₹{product.price}
-                      </span>
-
-                      {product.old_price !== null &&
-                        product.old_price !== undefined &&
-                        product.old_price !== "" && (
-
-                          <span className="text-sm text-zinc-400 line-through">
-                            ₹{product.old_price}
-                          </span>
-
-                        )}
-
-                    </div>
-
-
-                    {/* DESCRIPTION */}
-
-                    {product.description && (
-
-                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-500">
-                        {product.description}
-                      </p>
-
-                    )}
+  <a
+    href={`/products/${product.slug}`}
+    className="
+      mt-3
+      line-clamp-2
+      text-lg
+      font-bold
+      leading-6
+      tracking-tight
+      transition
+      duration-200
+      hover:text-amber-700
+      sm:text-xl
+    "
+  >
+    {product.name}
+  </a>
 
 
-                    {/* BUTTONS */}
+  {/* PRICE */}
 
-                    <div className="mt-auto pt-5">
+  <div className="mt-4 flex flex-wrap items-center gap-3">
 
-                      {/* VIEW PRODUCT */}
+    <span className="text-xl font-bold text-zinc-900">
+      ₹{product.price}
+    </span>
 
-                      <a
-                        href={`/products/${product.slug}`}
-                        className="
-                          block
-                          w-full
-                          rounded-full
-                          bg-zinc-900
-                          py-3
-                          text-center
-                          text-sm
-                          font-semibold
-                          text-white
-                          transition
-                          hover:bg-amber-700
-                        "
-                      >
-                        View Product
-                      </a>
+    {product.old_price !== null &&
+      product.old_price !== undefined &&
+      Number(product.old_price) > Number(product.price) && (
+        <>
+          <span className="text-sm text-zinc-400 line-through">
+            ₹{product.old_price}
+          </span>
+
+          <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">
+            {Math.round(
+              ((Number(product.old_price) -
+                Number(product.price)) /
+                Number(product.old_price)) *
+                100
+            )}
+            % OFF
+          </span>
+        </>
+      )}
+
+  </div>
 
 
-                      {/* WHATSAPP */}
+  {/* DESCRIPTION */}
 
-                      <a
-                        href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-                          `Hello Dayal Kitchen Ware 👋
+  {product.description && (
+    <p className="mt-4 line-clamp-3 text-sm leading-6 text-zinc-500">
+      {product.description}
+    </p>
+  )}
+
+
+  {/* ACTIONS */}
+
+  <div className="mt-auto pt-6">
+
+    <a
+      href={`/products/${product.slug}`}
+      className="
+        block
+        w-full
+        rounded-full
+        bg-zinc-900
+        py-3.5
+        text-center
+        text-sm
+        font-semibold
+        text-white
+        transition-all
+        duration-300
+        hover:bg-amber-700
+        hover:shadow-lg
+      "
+    >
+      View Product →
+    </a>
+
+    <a
+      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+        `Hello Dayal Kitchen Ware 👋
 
 I am interested in:
 
@@ -493,32 +508,34 @@ ${product.name}
 Price: ₹${product.price}
 
 Please share more details and availability.`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="
-                          mt-3
-                          block
-                          w-full
-                          rounded-full
-                          border
-                          border-green-600
-                          py-3
-                          text-center
-                          text-sm
-                          font-semibold
-                          text-green-700
-                          transition
-                          hover:bg-green-600
-                          hover:text-white
-                        "
-                      >
-                        Ask on WhatsApp
-                      </a>
+      )}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="
+        mt-3
+        block
+        w-full
+        rounded-full
+        border
+        border-green-600
+        py-3
+        text-center
+        text-sm
+        font-semibold
+        text-green-700
+        transition-all
+        duration-300
+        hover:bg-green-600
+        hover:text-white
+        hover:shadow-md
+      "
+    >
+      Ask on WhatsApp
+    </a>
 
-                    </div>
+  </div>
 
-                  </div>
+</div>
 
                 </article>
 
