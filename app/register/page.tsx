@@ -5,52 +5,136 @@ import Link from "next/link";
 import { supabase } from "../lib/supabase";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function handleRegister(e: FormEvent<HTMLFormElement>) {
+  async function handleRegister(
+    e: FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
     setLoading(true);
     setError("");
     setMessage("");
 
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: fullName.trim(),
-        },
-      },
-    });
+    const cleanName = fullName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
 
-    if (error) {
-      setError(error.message);
+    /* -----------------------------
+       VALIDATION
+    ----------------------------- */
+
+    if (cleanName.length < 2) {
+      setError("Please enter your full name.");
       setLoading(false);
       return;
     }
 
+    if (
+      !/^[6-9]\d{9}$/.test(cleanPhone)
+    ) {
+      setError(
+        "Please enter a valid 10-digit Indian mobile number."
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError(
+        "Password must be at least 6 characters."
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(
+        "Passwords do not match."
+      );
+      setLoading(false);
+      return;
+    }
+
+    /* -----------------------------
+       CREATE ACCOUNT
+    ----------------------------- */
+
+    const {
+      data,
+      error: signUpError,
+    } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        data: {
+          full_name: cleanName,
+          phone: cleanPhone,
+        },
+      },
+    });
+
+    if (signUpError) {
+      console.error(
+        "REGISTER ERROR:",
+        signUpError
+      );
+
+      setError(
+        signUpError.message ||
+          "Unable to create your account."
+      );
+
+      setLoading(false);
+      return;
+    }
+
+    /* -----------------------------
+       SUCCESS
+    ----------------------------- */
+
     if (data.user) {
-      setMessage(
-        "Account created successfully! You can now login."
+      if (data.session) {
+        setMessage(
+          "Account created successfully! Redirecting..."
+        );
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1200);
+      } else {
+        setMessage(
+          "Account created successfully! Please check your email to verify your account before signing in."
+        );
+
+        setFullName("");
+        setEmail("");
+        setPhone("");
+        setPassword("");
+        setConfirmPassword("");
+      }
+    } else {
+      setError(
+        "Account could not be created. Please try again."
       );
     }
 
-    setEmail("");
-    setPassword("");
-    setFullName("");
     setLoading(false);
   }
 
   return (
     <main className="min-h-screen bg-white px-4 py-8 sm:py-10">
 
-      <div className="mx-auto w-full max-w-[350px]">
+      <div className="mx-auto w-full max-w-[380px]">
 
         {/* LOGO */}
 
@@ -77,8 +161,9 @@ export default function RegisterPage() {
             Create your account
           </h1>
 
-          <p className="mt-2 text-sm text-zinc-600">
-            Create an account to manage your orders and profile.
+          <p className="mt-2 text-sm leading-5 text-zinc-600">
+            Create an account to manage your
+            orders and profile.
           </p>
 
           <form
@@ -101,7 +186,9 @@ export default function RegisterPage() {
                 id="fullName"
                 type="text"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) =>
+                  setFullName(e.target.value)
+                }
                 placeholder="Enter your full name"
                 required
                 autoComplete="name"
@@ -125,12 +212,58 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
                 placeholder="Enter your email"
                 required
                 autoComplete="email"
                 className="w-full rounded-md border border-zinc-500 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
               />
+
+            </div>
+
+            {/* MOBILE NUMBER */}
+
+            <div>
+
+              <label
+                htmlFor="phone"
+                className="mb-2 block text-sm font-bold text-zinc-900"
+              >
+                Mobile Number
+              </label>
+
+              <div className="flex">
+
+                <div className="flex items-center rounded-l-md border border-r-0 border-zinc-500 bg-zinc-50 px-3 text-sm font-medium text-zinc-700">
+                  +91
+                </div>
+
+                <input
+                  id="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(
+                      e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 10)
+                    )
+                  }
+                  placeholder="10-digit mobile number"
+                  required
+                  autoComplete="tel"
+                  className="w-full rounded-r-md border border-zinc-500 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
+                />
+
+              </div>
+
+              <p className="mt-2 text-xs text-zinc-500">
+                Your mobile number will be saved
+                with your account.
+              </p>
 
             </div>
 
@@ -149,7 +282,9 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
                 placeholder="Create a password"
                 minLength={6}
                 required
@@ -163,10 +298,38 @@ export default function RegisterPage() {
 
             </div>
 
+            {/* CONFIRM PASSWORD */}
+
+            <div>
+
+              <label
+                htmlFor="confirmPassword"
+                className="mb-2 block text-sm font-bold text-zinc-900"
+              >
+                Confirm Password
+              </label>
+
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) =>
+                  setConfirmPassword(
+                    e.target.value
+                  )
+                }
+                placeholder="Enter password again"
+                required
+                autoComplete="new-password"
+                className="w-full rounded-md border border-zinc-500 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
+              />
+
+            </div>
+
             {/* ERROR */}
 
             {error && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700">
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm leading-5 text-red-700">
                 {error}
               </div>
             )}
@@ -174,7 +337,7 @@ export default function RegisterPage() {
             {/* SUCCESS */}
 
             {message && (
-              <div className="rounded-md border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-700">
+              <div className="rounded-md border border-green-200 bg-green-50 px-3 py-3 text-sm leading-5 text-green-700">
                 {message}
               </div>
             )}
@@ -186,7 +349,9 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full rounded-md border border-zinc-800 bg-zinc-900 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Creating account..." : "Create account"}
+              {loading
+                ? "Creating account..."
+                : "Create account"}
             </button>
 
           </form>
@@ -194,8 +359,9 @@ export default function RegisterPage() {
           {/* INFO */}
 
           <p className="mt-5 text-xs leading-5 text-zinc-600">
-            By creating an account, you can manage your profile
-            and keep track of your orders.
+            By creating an account, you can manage
+            your profile and keep track of your
+            orders.
           </p>
 
         </div>
