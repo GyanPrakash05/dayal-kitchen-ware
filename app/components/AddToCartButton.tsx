@@ -1,49 +1,65 @@
 "use client";
 
+import { useState } from "react";
 import { useCart } from "../context/CartContext";
 
-type AddToCartButtonProps = {
-  product: {
-    name: string;
-    slug: string;
-    price: string;
-    image: string;
-  };
+type Product = {
+  name: string;
+  slug: string;
+  price: number;
+  image: string;
 };
 
 export default function AddToCartButton({
   product,
-}: AddToCartButtonProps) {
+}: {
+  product: Product;
+}) {
   const { addToCart } = useCart();
+  const [added, setAdded] = useState(false);
 
-  function handleAddToCart() {
-    addToCart(product);
+  const handleAddToCart = () => {
+    addToCart({
+      ...product,
+      image: product.image ?? "",
+    });
 
-    const phoneNumber = "917011872380";
-
-    const message = `Hello Dayal Kitchen Ware 👋
-
-I am interested in this product:
-
-Product: ${product.name}
-Price: ${product.price}
-
-I would like to know more about this product and availability.`;
-
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
-      message
-    )}`;
-
-    window.open(whatsappUrl, "_blank");
-  }
+    setAdded(true);
+  };
 
   return (
-    <button
-      type="button"
-      onClick={handleAddToCart}
-      className="relative z-50 mt-8 w-full cursor-pointer rounded-full bg-zinc-900 px-8 py-4 font-semibold text-white transition hover:bg-amber-700"
-    >
-      Add to Cart & WhatsApp
-    </button>
+    <div className="w-full">
+      {!added ? (
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          className="w-full rounded-full bg-zinc-900 px-6 py-4 text-center font-semibold text-white shadow-sm transition-all duration-300 hover:bg-amber-700 hover:shadow-lg active:scale-[0.98]"
+        >
+          🛒 Add to Cart
+        </button>
+      ) : (
+        <div className="space-y-3">
+          {/* ADDED SUCCESS */}
+
+          <div className="flex w-full items-center justify-center gap-2 rounded-full bg-green-600 px-6 py-4 font-semibold text-white shadow-lg">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+              ✓
+            </span>
+
+            <span>Added to Cart</span>
+          </div>
+
+          {/* VIEW CART */}
+
+          <a
+            href="/cart"
+            className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-zinc-900 bg-white px-6 py-4 font-semibold text-zinc-900 transition-all duration-300 hover:bg-zinc-900 hover:text-white"
+          >
+            View Cart
+            <span>→</span>
+          </a>
+        </div>
+      )}
+    </div>
   );
 }

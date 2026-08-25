@@ -1,6 +1,9 @@
 import { supabase } from "./lib/supabase";
 import ProductCardImage from "./components/ProductCardImage";
 import MobileBottomNav from "./components/MobileBottomNav";
+import AuthButton from "./components/AuthButton";
+import { CartProvider } from "./context/CartContext";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,32 +19,45 @@ const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent
 
 const mapsLink = "https://maps.app.goo.gl/qBMv1Kw6MHiDPJXw7";
 
+/* =========================================================
+   CATEGORIES
+========================================================= */
+
 const categories = [
   {
     name: "Bottle",
     title: "Bottles",
     description: "Stylish bottles for everyday use",
     fallback: "🥤",
+    image: null,
   },
   {
     name: "Cookware",
     title: "Cookware",
     description: "Cookers, pans & cookware sets",
     fallback: "🍳",
+    image: null,
   },
   {
     name: "Kitchen Tools",
     title: "Kitchen Tools",
     description: "Useful tools for everyday cooking",
     fallback: "🥄",
+    image:
+      "https://fns.co.in/cdn/shop/files/montavo-stainless-steel-serving-tools-elegant-kitchen-flat-lay.jpg?v=1763804653",
   },
   {
     name: "Dinner Sets",
     title: "Dinner Sets",
     description: "Elegant sets for every occasion",
     fallback: "🍽️",
+    image: null,
   },
 ];
+
+/* =========================================================
+   PAGE
+========================================================= */
 
 export default async function Home({
   searchParams,
@@ -61,9 +77,9 @@ export default async function Home({
   const cleanSearchQuery = searchQuery?.trim() || "";
   const cleanCategoryQuery = categoryQuery?.trim() || "";
 
-  // =========================================================
-  // GET ALL PRODUCTS
-  // =========================================================
+  /* =======================================================
+     GET PRODUCTS
+  ======================================================= */
 
   const { data: allProducts, error } = await supabase
     .from("products")
@@ -76,9 +92,9 @@ export default async function Home({
 
   const allProductList = allProducts ?? [];
 
-  // =========================================================
-  // CATEGORY FILTER
-  // =========================================================
+  /* =======================================================
+     CATEGORY FILTER
+  ======================================================= */
 
   let filteredProducts = allProductList;
 
@@ -90,29 +106,29 @@ export default async function Home({
     );
   }
 
-  // =========================================================
-  // SEARCH FILTER
-  // =========================================================
+  /* =======================================================
+     SEARCH FILTER
+  ======================================================= */
 
   if (cleanSearchQuery) {
     const query = cleanSearchQuery.toLowerCase();
 
     filteredProducts = filteredProducts.filter((product) => {
       const name = product.name?.toLowerCase() || "";
-      const productCategory = product.category?.toLowerCase() || "";
+      const category = product.category?.toLowerCase() || "";
       const description = product.description?.toLowerCase() || "";
 
       return (
         name.includes(query) ||
-        productCategory.includes(query) ||
+        category.includes(query) ||
         description.includes(query)
       );
     });
   }
 
-  // =========================================================
-  // PRODUCT DISPLAY LOGIC
-  // =========================================================
+  /* =======================================================
+     PRODUCT DISPLAY LOGIC
+  ======================================================= */
 
   const isFiltering = Boolean(
     cleanCategoryQuery || cleanSearchQuery
@@ -126,9 +142,9 @@ export default async function Home({
       ? filteredProducts
       : filteredProducts.slice(0, 4);
 
-  // =========================================================
-  // CATEGORY IMAGES
-  // =========================================================
+  /* =======================================================
+     CATEGORY IMAGES
+  ======================================================= */
 
   const categoryCards = categories.map((item) => {
     const categoryProduct = allProductList.find(
@@ -140,13 +156,13 @@ export default async function Home({
 
     return {
       ...item,
-      image: categoryProduct?.image ?? null,
+      image: item.image ?? categoryProduct?.image ?? null,
     };
   });
 
-  // =========================================================
-  // ACTIVE CATEGORY
-  // =========================================================
+  /* =======================================================
+     ACTIVE CATEGORY
+  ======================================================= */
 
   const activeCategory = categories.find(
     (item) =>
@@ -154,19 +170,20 @@ export default async function Home({
       cleanCategoryQuery.toLowerCase()
   );
 
-  // =========================================================
-  // PAGE
-  // =========================================================
+  /* =======================================================
+     HERO PRODUCT
+  ======================================================= */
+
+  const heroProduct = allProductList[0] ?? null;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 text-zinc-900 md:pb-0">
 
-      {/* ===================================================== */}
-      {/* NAVBAR */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          NAVBAR
+      ===================================================== */}
 
-      <header className="sticky top-0 z-50 border-b border-black/5 bg-white/90 backdrop-blur-xl">
-
+      <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-[#fffdf9]/95 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
 
           <div className="flex items-center justify-between gap-4">
@@ -279,6 +296,7 @@ export default async function Home({
               >
                 WhatsApp Us
               </a>
+              <AuthButton />
 
             </div>
 
@@ -358,7 +376,6 @@ export default async function Home({
                     method="GET"
                     className="mt-2"
                   >
-
                     <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-50 px-3">
 
                       <svg
@@ -392,7 +409,6 @@ export default async function Home({
                       </button>
 
                     </div>
-
                   </form>
 
                   <a
@@ -411,277 +427,272 @@ export default async function Home({
             </details>
 
           </div>
-
         </div>
-
       </header>
 
-      {/* ===================================================== */}
-      {/* HERO + CATEGORIES */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          HERO
+      ===================================================== */}
 
       {!cleanSearchQuery && (
-        <>
+        <section
+          id="home"
+          className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
+        >
 
-          {/* ================================================= */}
-          {/* HERO */}
-          {/* ================================================= */}
+          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
 
-          <section
-            id="home"
-            className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
-          >
+            {/* HERO TEXT */}
 
-            <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+            <div className="animate-[fadeInUp_0.7s_ease-out]">
 
-              {/* HERO TEXT */}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
+                Quality kitchenware for every home
+              </p>
 
-              <div className="animate-[fadeInUp_0.7s_ease-out]">
+              <h2 className="mt-4 text-[2.6rem] font-bold leading-[1.04] tracking-tight sm:text-6xl lg:text-7xl">
 
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
-                  Quality kitchenware for every home
-                </p>
+                Everything your
+                <br />
 
-                <h2 className="mt-4 text-[2.6rem] font-bold leading-[1.04] tracking-tight sm:text-6xl lg:text-7xl">
+                kitchen needs.
+                <br />
 
-                  Everything your
-                  <br />
+                <span className="text-amber-700">
+                  Made for everyday.
+                </span>
 
-                  kitchen needs.
-                  <br />
+              </h2>
 
-                  <span className="text-amber-700">
-                    Made for everyday.
-                  </span>
+              <p className="mt-5 max-w-xl text-[15px] leading-7 text-zinc-600 sm:text-lg sm:leading-8">
+                Discover beautiful, practical and reliable
+                kitchenware designed for everyday cooking and
+                modern homes.
+              </p>
 
-                </h2>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:gap-4">
 
-                <p className="mt-5 max-w-xl text-[15px] leading-7 text-zinc-600 sm:text-lg sm:leading-8">
-                  Discover beautiful, practical and reliable
-                  kitchenware designed for everyday cooking and
-                  modern homes.
-                </p>
+                <a
+                  href="#categories"
+                  className="rounded-full bg-zinc-900 px-6 py-3.5 text-center text-sm font-semibold text-white shadow-lg transition-all hover:bg-amber-700 hover:shadow-xl sm:px-7"
+                >
+                  Explore Collection →
+                </a>
 
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:gap-4">
-
-                  <a
-                    href="#categories"
-                    className="rounded-full bg-zinc-900 px-6 py-3.5 text-center text-sm font-semibold text-white shadow-lg transition-all hover:bg-amber-700 hover:shadow-xl sm:px-7"
-                  >
-                    Explore Collection →
-                  </a>
-
-                  <a
-                    href="#location"
-                    className="rounded-full border border-zinc-300 bg-white px-6 py-3.5 text-center text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm sm:px-7"
-                  >
-                    Visit Our Store
-                  </a>
-
-                </div>
+                <a
+                  href="#location"
+                  className="rounded-full border border-zinc-300 bg-white px-6 py-3.5 text-center text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm sm:px-7"
+                >
+                  Visit Our Store
+                </a>
 
               </div>
 
-              {/* HERO IMAGE */}
+            </div>
 
-              <div className="relative min-h-[330px] overflow-hidden rounded-[2rem] bg-white shadow-sm sm:min-h-[500px] sm:rounded-[2.5rem]">
+            {/* HERO IMAGE */}
 
-                <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-100/50 blur-3xl" />
+            <div className="relative min-h-[330px] overflow-hidden rounded-[2rem] bg-white shadow-sm sm:min-h-[500px] sm:rounded-[2.5rem]">
 
-                <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-zinc-100/70 blur-3xl" />
+              <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-100/50 blur-3xl" />
 
-                <div className="relative flex h-full min-h-[330px] items-center justify-center p-5 sm:min-h-[500px] sm:p-8">
+              <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-zinc-100/70 blur-3xl" />
 
-                 {allProductList[0]?.image ? (
+              <div className="relative flex h-full min-h-[330px] items-center justify-center p-5 sm:min-h-[500px] sm:p-8">
 
-  <a
-    href={`/products/${allProductList[0].slug}`}
-    className="flex h-full w-full items-center justify-center"
-    aria-label={`View ${allProductList[0].name}`}
-  >
-    <img
-      src={allProductList[0].image}
-      alt={allProductList[0].name}
-      className="h-full w-full max-h-[360px] object-contain transition-transform duration-700 hover:scale-[1.03] sm:max-h-[460px]"
-    />
-  </a>
-
-) : (
-
-                    <div className="text-7xl sm:text-9xl">
-                      🍳
-                    </div>
-
-                  )}
-
-                </div>
-
-                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-lg backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-7 sm:px-5 sm:py-4">
-
-                  <div className="min-w-0">
-
-                    <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-amber-700 sm:text-[10px]">
-                      Featured Kitchenware
-                    </p>
+                {heroProduct?.image ? (
 
                   <a
-  href={
-    allProductList[0]?.slug
-      ? `/products/${allProductList[0].slug}`
-      : "#products"
-  }
-  className="mt-1 block max-w-[190px] truncate text-sm font-semibold text-zinc-800 transition-colors hover:text-amber-700 sm:max-w-xs"
->
-  {allProductList[0]?.name || "Cook • Serve • Enjoy"}
-</a>
+                    href={`/products/${heroProduct.slug}`}
+                    className="flex h-full w-full items-center justify-center"
+                    aria-label={`View ${heroProduct.name}`}
+                  >
+                    <img
+                      src={heroProduct.image}
+                      alt={heroProduct.name}
+                      className="h-full w-full max-h-[360px] object-contain transition-transform duration-700 hover:scale-[1.03] sm:max-h-[460px]"
+                    />
+                  </a>
+
+                ) : (
+
+                  <div className="text-7xl sm:text-9xl">
+                    🍳
                   </div>
 
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
-                    →
-                  </span>
+                )}
+
+              </div>
+
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-lg backdrop-blur-md sm:bottom-7 sm:left-7 sm:right-7 sm:px-5 sm:py-4">
+
+                <div className="min-w-0">
+
+                  <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-amber-700 sm:text-[10px]">
+                    Featured Kitchenware
+                  </p>
+
+                  <a
+                    href={
+                      heroProduct?.slug
+                        ? `/products/${heroProduct.slug}`
+                        : "#products"
+                    }
+                    className="mt-1 block max-w-[190px] truncate text-sm font-semibold text-zinc-800 transition-colors hover:text-amber-700 sm:max-w-xs"
+                  >
+                    {heroProduct?.name || "Cook • Serve • Enjoy"}
+                  </a>
 
                 </div>
 
-              </div>
-
-            </div>
-
-          </section>
-
-          {/* ================================================= */}
-          {/* TRUST STRIP */}
-          {/* ================================================= */}
-
-          <section className="border-y border-black/5 bg-white">
-
-            <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-black/5 sm:grid-cols-4">
-
-              <div className="px-4 py-6 text-center sm:py-7">
-                <p className="text-xl sm:text-2xl">✓</p>
-                <p className="mt-2 text-xs font-semibold sm:text-sm">
-                  Quality Products
-                </p>
-              </div>
-
-              <div className="px-4 py-6 text-center sm:py-7">
-                <p className="text-xl sm:text-2xl">₹</p>
-                <p className="mt-2 text-xs font-semibold sm:text-sm">
-                  Fair Pricing
-                </p>
-              </div>
-
-              <div className="px-4 py-6 text-center sm:py-7">
-                <p className="text-xl sm:text-2xl">💬</p>
-                <p className="mt-2 text-xs font-semibold sm:text-sm">
-                  Easy Support
-                </p>
-              </div>
-
-              <div className="px-4 py-6 text-center sm:py-7">
-                <p className="text-xl sm:text-2xl">📍</p>
-                <p className="mt-2 text-xs font-semibold sm:text-sm">
-                  Local Store
-                </p>
-              </div>
-
-            </div>
-
-          </section>
-
-          {/* ================================================= */}
-          {/* CATEGORIES */}
-          {/* ================================================= */}
-
-          <section
-            id="categories"
-            className="border-t border-black/5 bg-[#faf9f6] py-14 sm:py-20"
-          >
-
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-              <div className="max-w-2xl">
-
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
-                  Explore our collection
-                </p>
-
-                <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                  Shop by Category
-                </h2>
-
-                <p className="mt-3 text-sm leading-6 text-zinc-500 sm:text-base">
-                  Find the right essentials for cooking, serving
-                  and everyday living.
-                </p>
-
-              </div>
-
-              <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-6">
-
-                {categoryCards.map((item) => (
-
-                  <a
-                    key={item.name}
-                    href={`/?category=${encodeURIComponent(
-                      item.name
-                    )}#products`}
-                    className="group relative overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl sm:rounded-3xl"
-                  >
-
-                    <div className="relative h-36 overflow-hidden bg-white sm:h-52">
-
-                      {item.image ? (
-
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="h-full w-full object-contain p-3 transition-transform duration-700 ease-out group-hover:scale-105 sm:p-5"
-                        />
-
-                      ) : (
-
-                        <div className="flex h-full items-center justify-center text-5xl sm:text-7xl">
-                          {item.fallback}
-                        </div>
-
-                      )}
-
-                      <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover:bg-black/5" />
-
-                    </div>
-
-                    <div className="p-3.5 sm:p-6">
-
-                      <h3 className="text-sm font-bold sm:text-lg">
-                        {item.title}
-                      </h3>
-
-                      <p className="mt-1 text-[10px] leading-4 text-zinc-500 sm:text-sm sm:leading-5">
-                        {item.description}
-                      </p>
-
-                      <span className="mt-3 inline-block text-[10px] font-semibold text-amber-700 sm:mt-4 sm:text-xs">
-                        Explore →
-                      </span>
-
-                    </div>
-
-                  </a>
-
-                ))}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
+                  →
+                </span>
 
               </div>
 
             </div>
 
-          </section>
+          </div>
 
-        </>
+        </section>
       )}
 
-      {/* ===================================================== */}
-      {/* PRODUCTS */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          TRUST STRIP
+      ===================================================== */}
+
+      {!cleanSearchQuery && (
+        <section className="border-y border-black/5 bg-white">
+
+          <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-black/5 sm:grid-cols-4">
+
+            <div className="px-4 py-6 text-center sm:py-7">
+              <p className="text-xl sm:text-2xl">✓</p>
+              <p className="mt-2 text-xs font-semibold sm:text-sm">
+                Quality Products
+              </p>
+            </div>
+
+            <div className="px-4 py-6 text-center sm:py-7">
+              <p className="text-xl sm:text-2xl">₹</p>
+              <p className="mt-2 text-xs font-semibold sm:text-sm">
+                Fair Pricing
+              </p>
+            </div>
+
+            <div className="px-4 py-6 text-center sm:py-7">
+              <p className="text-xl sm:text-2xl">💬</p>
+              <p className="mt-2 text-xs font-semibold sm:text-sm">
+                Easy Support
+              </p>
+            </div>
+
+            <div className="px-4 py-6 text-center sm:py-7">
+              <p className="text-xl sm:text-2xl">📍</p>
+              <p className="mt-2 text-xs font-semibold sm:text-sm">
+                Local Store
+              </p>
+            </div>
+
+          </div>
+
+        </section>
+      )}
+
+      {/* =====================================================
+          CATEGORIES
+      ===================================================== */}
+
+      {!cleanSearchQuery && (
+        <section
+          id="categories"
+          className="border-t border-black/5 bg-[#faf9f6] py-14 sm:py-20"
+        >
+
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+            <div className="max-w-2xl">
+
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 sm:text-sm">
+                Explore our collection
+              </p>
+
+              <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+                Shop by Category
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-zinc-500 sm:text-base">
+                Find the right essentials for cooking, serving
+                and everyday living.
+              </p>
+
+            </div>
+
+            <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-6">
+
+              {categoryCards.map((item) => (
+
+                <a
+                  key={item.name}
+                  href={`/?category=${encodeURIComponent(
+                    item.name
+                  )}#products`}
+                  className="group relative overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl sm:rounded-3xl"
+                >
+
+                  <div className="relative h-36 overflow-hidden bg-white sm:h-52">
+
+                    {item.image ? (
+
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="h-full w-full object-contain p-3 transition-transform duration-700 ease-out group-hover:scale-105 sm:p-5"
+                      />
+
+                    ) : (
+
+                      <div className="flex h-full items-center justify-center text-5xl sm:text-7xl">
+                        {item.fallback}
+                      </div>
+
+                    )}
+
+                    <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover:bg-black/5" />
+
+                  </div>
+
+                  <div className="p-3.5 sm:p-6">
+
+                    <h3 className="text-sm font-bold sm:text-lg">
+                      {item.title}
+                    </h3>
+
+                    <p className="mt-1 text-[10px] leading-4 text-zinc-500 sm:text-sm sm:leading-5">
+                      {item.description}
+                    </p>
+
+                    <span className="mt-3 inline-block text-[10px] font-semibold text-amber-700 sm:mt-4 sm:text-xs">
+                      Explore →
+                    </span>
+
+                  </div>
+
+                </a>
+
+              ))}
+
+            </div>
+
+          </div>
+
+        </section>
+      )}
+
+      {/* =====================================================
+          PRODUCTS
+      ===================================================== */}
 
       <section
         id="products"
@@ -736,18 +747,7 @@ export default async function Home({
 
             </div>
 
-            {isFiltering && (
-
-              <a
-                href="/#products"
-                className="w-fit rounded-full border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
-              >
-                View Featured Products
-              </a>
-
-            )}
-
-            {showAllProducts && (
+            {(isFiltering || showAllProducts) && (
 
               <a
                 href="/#products"
@@ -767,28 +767,38 @@ export default async function Home({
             <>
 
               <div
-            className="mt-8 grid grid-cols-2 gap-3 pb-5 sm:gap-6 lg:grid-cols-3"
->
+                className="
+                  mt-8
+                  grid
+                  grid-cols-2
+                  gap-3
+                  sm:gap-6
+                  lg:grid-cols-3
+                "
+              >
 
                 {productList.map((product) => (
 
                   <article
                     key={product.id ?? product.slug}
-className="
-  group
-  min-w-0
-  overflow-hidden
-  rounded-[1.5rem]
-  border
-  border-zinc-200
-  bg-white
-  shadow-sm
-  transition-all
-  duration-500
-  hover:-translate-y-2
-  hover:shadow-2xl
-  sm:rounded-3xl
-"                  >
+                    className="
+                      group
+                      min-w-0
+                      overflow-hidden
+                      rounded-[1.5rem]
+                      border
+                      border-zinc-200
+                      bg-white
+                      shadow-sm
+                      transition-all
+                      duration-500
+                      hover:-translate-y-2
+                      hover:shadow-2xl
+                      sm:rounded-3xl
+                    "
+                  >
+
+                    {/* PRODUCT IMAGE */}
 
                     <ProductCardImage
                       name={product.name}
@@ -797,17 +807,19 @@ className="
                       badge={product.badge}
                     />
 
-                    <div className="flex min-h-[310px] flex-col p-5 sm:min-h-[320px] sm:p-6">
+                    {/* PRODUCT CONTENT */}
 
-                      <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-h-[310px] flex-col p-4 sm:min-h-[320px] sm:p-6">
 
-                        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-400 sm:text-xs">
+                      <div className="flex items-center justify-between gap-2">
+
+                        <p className="truncate text-[8px] font-semibold uppercase tracking-[0.16em] text-zinc-400 sm:text-xs">
                           {product.category}
                         </p>
 
                         {product.badge && (
 
-                          <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-700">
+                          <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-amber-700 sm:px-2.5 sm:text-[9px]">
                             {product.badge}
                           </span>
 
@@ -815,18 +827,20 @@ className="
 
                       </div>
 
+                      {/* PRODUCT NAME */}
+
                       <a
                         href={`/products/${product.slug}`}
-                        className="mt-3 line-clamp-2 text-lg font-bold leading-6 tracking-tight transition duration-200 hover:text-amber-700 sm:text-xl"
+                        className="mt-3 line-clamp-2 text-base font-bold leading-5 tracking-tight transition duration-200 hover:text-amber-700 sm:text-xl sm:leading-6"
                       >
                         {product.name}
                       </a>
 
                       {/* PRICE */}
 
-                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
 
-                        <span className="text-xl font-bold text-zinc-900">
+                        <span className="text-lg font-bold text-zinc-900 sm:text-xl">
                           ₹{product.price}
                         </span>
 
@@ -836,12 +850,11 @@ className="
                             Number(product.price) && (
 
                             <>
-
-                              <span className="text-sm text-zinc-400 line-through">
+                              <span className="text-xs text-zinc-400 line-through sm:text-sm">
                                 ₹{product.old_price}
                               </span>
 
-                              <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">
+                              <span className="rounded-full bg-green-50 px-2 py-1 text-[8px] font-bold text-green-700 sm:px-2.5 sm:text-[10px]">
 
                                 {Math.round(
                                   ((Number(product.old_price) -
@@ -853,16 +866,17 @@ className="
                                 % OFF
 
                               </span>
-
                             </>
 
                           )}
 
                       </div>
 
+                      {/* DESCRIPTION */}
+
                       {product.description && (
 
-                        <p className="mt-4 line-clamp-3 text-sm leading-6 text-zinc-500">
+                        <p className="mt-4 line-clamp-3 text-xs leading-5 text-zinc-500 sm:text-sm sm:leading-6">
                           {product.description}
                         </p>
 
@@ -870,11 +884,11 @@ className="
 
                       {/* BUTTONS */}
 
-                      <div className="mt-auto pt-6">
+                      <div className="mt-auto pt-5 sm:pt-6">
 
                         <a
                           href={`/products/${product.slug}`}
-                          className="block w-full rounded-full bg-zinc-900 py-3.5 text-center text-sm font-semibold text-white transition-all duration-300 hover:bg-amber-700 hover:shadow-lg"
+                          className="block w-full rounded-full bg-zinc-900 py-3 text-center text-xs font-semibold text-white transition-all duration-300 hover:bg-amber-700 hover:shadow-lg sm:py-3.5 sm:text-sm"
                         >
                           View Product →
                         </a>
@@ -893,7 +907,7 @@ Please share more details and availability.`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-3 block w-full rounded-full border border-green-600 py-3 text-center text-sm font-semibold text-green-700 transition-all duration-300 hover:bg-green-600 hover:text-white hover:shadow-md"
+                          className="mt-2.5 block w-full rounded-full border border-green-600 py-2.5 text-center text-xs font-semibold text-green-700 transition-all duration-300 hover:bg-green-600 hover:text-white hover:shadow-md sm:mt-3 sm:py-3 sm:text-sm"
                         >
                           Ask on WhatsApp
                         </a>
@@ -939,6 +953,8 @@ Please share more details and availability.`
 
           ) : (
 
+            /* NO PRODUCTS */
+
             <div className="mt-10 rounded-3xl border border-dashed border-zinc-300 p-10 text-center">
 
               <div className="text-5xl">
@@ -950,7 +966,8 @@ Please share more details and availability.`
               </h3>
 
               <p className="mt-2 text-sm text-zinc-500">
-                Try searching with a different product name or category.
+                Try searching with a different product name or
+                category.
               </p>
 
               <a
@@ -968,9 +985,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* ===================================================== */}
-      {/* WHY CHOOSE US */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          WHY CHOOSE US
+      ===================================================== */}
 
       <section
         id="why-us"
@@ -990,8 +1007,8 @@ Please share more details and availability.`
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-zinc-500 sm:text-base">
-              Simple products, helpful service and kitchen essentials
-              you can rely on.
+              Simple products, helpful service and kitchen
+              essentials you can rely on.
             </p>
 
           </div>
@@ -1048,9 +1065,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* ===================================================== */}
-      {/* HOW TO ORDER */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          HOW TO ORDER
+      ===================================================== */}
 
       <section
         id="how-to-order"
@@ -1134,9 +1151,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* ===================================================== */}
-      {/* LOCATION */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          LOCATION
+      ===================================================== */}
 
       <section
         id="location"
@@ -1160,9 +1177,9 @@ Please share more details and availability.`
               </h2>
 
               <p className="mt-5 max-w-xl text-sm leading-7 text-zinc-600 sm:text-base sm:leading-8">
-                Looking for something specific? Visit Dayal Kitchen
-                Ware and explore our collection of kitchen and home
-                essentials.
+                Looking for something specific? Visit Dayal
+                Kitchen Ware and explore our collection of kitchen
+                and home essentials.
               </p>
 
               <div className="mt-7 rounded-3xl border border-white/70 bg-white/70 p-5 shadow-sm backdrop-blur sm:p-6">
@@ -1258,9 +1275,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* ===================================================== */}
-      {/* ABOUT */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          ABOUT
+      ===================================================== */}
 
       <section
         id="about"
@@ -1302,9 +1319,9 @@ Please share more details and availability.`
 
       </section>
 
-      {/* ===================================================== */}
-      {/* CONTACT CTA */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          CONTACT CTA
+      ===================================================== */}
 
       <section
         id="contact"
@@ -1352,15 +1369,17 @@ Please share more details and availability.`
 
       </section>
 
-      {/* ===================================================== */}
-      {/* FOOTER */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
 
       <footer className="bg-zinc-950 py-10 text-white">
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+
+            {/* BRAND */}
 
             <div>
 
@@ -1373,6 +1392,8 @@ Please share more details and availability.`
               </p>
 
             </div>
+
+            {/* EXPLORE */}
 
             <div>
 
@@ -1406,6 +1427,8 @@ Please share more details and availability.`
               </div>
 
             </div>
+
+            {/* STORE */}
 
             <div>
 
@@ -1444,6 +1467,8 @@ Please share more details and availability.`
 
             </div>
 
+            {/* CONTACT */}
+
             <div>
 
               <p className="text-sm font-semibold">
@@ -1474,61 +1499,13 @@ Please share more details and availability.`
         </div>
 
       </footer>
-            
 
-      {/* MOBILE BOTTOM NAVIGATION */}
+      {/* =====================================================
+          MOBILE BOTTOM NAVIGATION
+      ===================================================== */}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-[100] border-t border-black/10 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-xl md:hidden">
+      <MobileBottomNav />
 
-        <div className="mx-auto flex max-w-md items-center justify-around">
-
-          <a
-            href="#home"
-            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
-          >
-            <span className="text-xl">⌂</span>
-            <span className="text-[10px] font-semibold">Home</span>
-          </a>
-
-          <a
-            href="#categories"
-            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
-          >
-            <span className="text-xl">▦</span>
-            <span className="text-[10px] font-semibold">Categories</span>
-          </a>
-
-          <a
-            href="#products"
-            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
-          >
-            <span className="text-xl">🛍</span>
-            <span className="text-[10px] font-semibold">Products</span>
-          </a>
-
-          <a
-            href="#about"
-            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-zinc-500 transition-all active:scale-90"
-          >
-            <span className="text-xl">ⓘ</span>
-            <span className="text-[10px] font-semibold">About</span>
-          </a>
-
-          <a
-            href={whatsappLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-green-600 transition-all active:scale-90"
-          >
-            <span className="text-xl">💬</span>
-            <span className="text-[10px] font-semibold">WhatsApp</span>
-          </a>
-
-        </div>
-
-      </nav>
-
-     <MobileBottomNav />
     </main>
   );
 }

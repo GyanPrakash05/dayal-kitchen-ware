@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 
 import ProductGallery from "@/app/components/ProductGallery";
+import AddToCartButton from "@/app/components/AddToCartButton";
 
 type ProductPageProps = {
   params: Promise<{
@@ -69,7 +70,6 @@ Please share more details and availability.`;
         </div>
       </header>
 
-
       {/* ================================================= */}
       {/* PRODUCT */}
       {/* ================================================= */}
@@ -88,7 +88,6 @@ Please share more details and availability.`;
             images={product.images}
           />
 
-
           {/* ================================================= */}
           {/* PRODUCT DETAILS */}
           {/* ================================================= */}
@@ -103,20 +102,17 @@ Please share more details and availability.`;
               </span>
             )}
 
-
             {/* CATEGORY */}
 
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
               {product.category}
             </p>
 
-
             {/* NAME */}
 
             <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
               {product.name}
             </h1>
-
 
             {/* PRICE */}
 
@@ -126,14 +122,14 @@ Please share more details and availability.`;
                 ₹{product.price}
               </span>
 
-              {product.old_price && (
-                <span className="text-lg text-zinc-400 line-through">
-                  ₹{product.old_price}
-                </span>
-              )}
+              {product.old_price &&
+                Number(product.old_price) > Number(product.price) && (
+                  <span className="text-lg text-zinc-400 line-through">
+                    ₹{product.old_price}
+                  </span>
+                )}
 
             </div>
-
 
             {/* DESCRIPTION */}
 
@@ -149,24 +145,41 @@ Please share more details and availability.`;
 
             </div>
 
+            {/* ================================================= */}
+            {/* ACTION BUTTONS */}
+            {/* ================================================= */}
 
-            {/* WHATSAPP */}
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
 
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-8 block rounded-full bg-green-600 px-8 py-4 text-center font-semibold text-white transition hover:bg-green-700"
-            >
-              Ask on WhatsApp
-            </a>
+              {/* ASK ON WHATSAPP */}
 
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full bg-green-600 px-6 py-4 text-center font-semibold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-lg"
+              >
+                Ask on WhatsApp
+              </a>
 
-            {/* BACK */}
+              {/* ADD TO CART */}
+
+              <AddToCartButton
+                product={{
+                  name: product.name,
+                  slug: product.slug,
+                  price: product.price,
+                  image: product.image,
+                }}
+              />
+
+            </div>
+
+            {/* CONTINUE SHOPPING */}
 
             <a
               href="/#products"
-              className="mt-4 block rounded-full border border-zinc-300 bg-white px-8 py-4 text-center font-semibold transition hover:border-zinc-900"
+              className="mt-4 block rounded-full border border-zinc-300 bg-white px-8 py-4 text-center font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
             >
               Continue Shopping
             </a>

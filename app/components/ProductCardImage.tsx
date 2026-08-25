@@ -107,7 +107,7 @@ export default function ProductCardImage({
         className="
           relative
           flex
-          h-[260px]
+          h-[185px]
           w-full
           items-center
           justify-center

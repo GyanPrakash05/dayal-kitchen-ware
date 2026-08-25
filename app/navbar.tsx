@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AuthButton from "./components/AuthButton";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -71,7 +72,7 @@ export default function Navbar() {
             >
               WhatsApp Us
             </a>
-
+<AuthButton />
           </div>
 
           {/* MOBILE MENU BUTTON */}
