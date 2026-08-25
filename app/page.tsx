@@ -492,15 +492,21 @@ export default async function Home({
 
                 <div className="relative flex h-full min-h-[330px] items-center justify-center p-5 sm:min-h-[500px] sm:p-8">
 
-                  {allProductList[0]?.image ? (
+                 {allProductList[0]?.image ? (
 
-                    <img
-                      src={allProductList[0].image}
-                      alt={allProductList[0].name}
-                      className="max-h-[280px] max-w-[94%] object-contain drop-shadow-2xl transition-transform duration-700 hover:scale-[1.04] sm:max-h-[460px]"
-                    />
+  <a
+    href={`/products/${allProductList[0].slug}`}
+    className="flex h-full w-full items-center justify-center"
+    aria-label={`View ${allProductList[0].name}`}
+  >
+    <img
+      src={allProductList[0].image}
+      alt={allProductList[0].name}
+      className="h-full w-full max-h-[360px] object-contain transition-transform duration-700 hover:scale-[1.03] sm:max-h-[460px]"
+    />
+  </a>
 
-                  ) : (
+) : (
 
                     <div className="text-7xl sm:text-9xl">
                       🍳
@@ -518,11 +524,16 @@ export default async function Home({
                       Featured Kitchenware
                     </p>
 
-                    <p className="mt-1 max-w-[190px] truncate text-xs font-semibold text-zinc-800 sm:max-w-xs sm:text-sm">
-                      {allProductList[0]?.name ||
-                        "Cook • Serve • Enjoy"}
-                    </p>
-
+                  <a
+  href={
+    allProductList[0]?.slug
+      ? `/products/${allProductList[0].slug}`
+      : "#products"
+  }
+  className="mt-1 block max-w-[190px] truncate text-sm font-semibold text-zinc-800 transition-colors hover:text-amber-700 sm:max-w-xs"
+>
+  {allProductList[0]?.name || "Cook • Serve • Enjoy"}
+</a>
                   </div>
 
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
@@ -756,19 +767,28 @@ export default async function Home({
             <>
 
               <div
-                className="mt-7 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 sm:mt-8 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:pb-0 lg:grid-cols-3"
-                style={{
-                  scrollbarWidth: "none",
-                  msOverflowStyle: "none",
-                }}
-              >
+            className="mt-8 grid grid-cols-2 gap-3 pb-5 sm:gap-6 lg:grid-cols-3"
+>
 
                 {productList.map((product) => (
 
                   <article
                     key={product.id ?? product.slug}
-                    className="group w-[82vw] min-w-[82vw] snap-start overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl sm:w-auto sm:min-w-0 sm:rounded-3xl"
-                  >
+className="
+  group
+  min-w-0
+  overflow-hidden
+  rounded-[1.5rem]
+  border
+  border-zinc-200
+  bg-white
+  shadow-sm
+  transition-all
+  duration-500
+  hover:-translate-y-2
+  hover:shadow-2xl
+  sm:rounded-3xl
+"                  >
 
                     <ProductCardImage
                       name={product.name}
