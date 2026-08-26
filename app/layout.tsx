@@ -15,7 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://dayal-kitchen-ware.vercel.app"),
+  metadataBase: new URL(
+    "https://dayal-kitchen-ware.vercel.app"
+  ),
 
   title: {
     default: "Dayal Kitchen Ware | Kitchenware & Home Essentials",
@@ -47,6 +49,11 @@ export const metadata: Metadata = {
 
   alternates: {
     canonical: "https://dayal-kitchen-ware.vercel.app",
+  },
+
+  verification: {
+    google:
+      "GSbo3tRpLpp6M0kG2iRNJixeeON3WYASksL9UbzReww",
   },
 
   openGraph: {
