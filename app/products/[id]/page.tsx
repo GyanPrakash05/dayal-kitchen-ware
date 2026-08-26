@@ -106,11 +106,14 @@ function ProductSchema({ product }: { product: any }) {
 
     url: productUrl,
 
-    brand: {
-      "@type": "Brand",
-      name: "Dayal Kitchen Ware",
-    },
-
+   ...(product.brand
+  ? {
+      brand: {
+        "@type": "Brand",
+        name: product.brand,
+      },
+    }
+  : {}),
     offers: {
       "@type": "Offer",
 
