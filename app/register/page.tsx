@@ -9,16 +9,33 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function handleRegister(
-    e: FormEvent<HTMLFormElement>
-  ) {
+  async function handleGoogleLogin() {
+    setGoogleLoading(true);
+    setError("");
+    setMessage("");
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleRegister(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     setLoading(true);
@@ -29,19 +46,13 @@ export default function RegisterPage() {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPhone = phone.trim();
 
-    /* -----------------------------
-       VALIDATION
-    ----------------------------- */
-
     if (cleanName.length < 2) {
       setError("Please enter your full name.");
       setLoading(false);
       return;
     }
 
-    if (
-      !/^[6-9]\d{9}$/.test(cleanPhone)
-    ) {
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
       setError(
         "Please enter a valid 10-digit Indian mobile number."
       );
@@ -50,24 +61,16 @@ export default function RegisterPage() {
     }
 
     if (password.length < 6) {
-      setError(
-        "Password must be at least 6 characters."
-      );
+      setError("Password must be at least 6 characters.");
       setLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError(
-        "Passwords do not match."
-      );
+      setError("Passwords do not match.");
       setLoading(false);
       return;
     }
-
-    /* -----------------------------
-       CREATE ACCOUNT
-    ----------------------------- */
 
     const {
       data,
@@ -84,10 +87,7 @@ export default function RegisterPage() {
     });
 
     if (signUpError) {
-      console.error(
-        "REGISTER ERROR:",
-        signUpError
-      );
+      console.error("REGISTER ERROR:", signUpError);
 
       setError(
         signUpError.message ||
@@ -97,10 +97,6 @@ export default function RegisterPage() {
       setLoading(false);
       return;
     }
-
-    /* -----------------------------
-       SUCCESS
-    ----------------------------- */
 
     if (data.user) {
       if (data.session) {
@@ -133,13 +129,11 @@ export default function RegisterPage() {
 
   return (
     <main className="min-h-screen bg-white px-4 py-8 sm:py-10">
-
       <div className="mx-auto w-full max-w-[380px]">
 
         {/* LOGO */}
 
         <div className="mb-6 text-center">
-
           <Link
             href="/"
             className="text-xl font-bold tracking-tight text-zinc-900"
@@ -150,7 +144,6 @@ export default function RegisterPage() {
           <p className="mt-1 text-xs text-zinc-500">
             Kitchen • Home • Lifestyle
           </p>
-
         </div>
 
         {/* REGISTER CARD */}
@@ -166,15 +159,72 @@ export default function RegisterPage() {
             orders and profile.
           </p>
 
+          {/* GOOGLE LOGIN */}
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            className="mt-6 flex w-full items-center justify-center gap-3 rounded-md border border-zinc-400 bg-white py-3 text-sm font-semibold text-zinc-900 transition hover:border-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {googleLoading ? (
+              "Connecting to Google..."
+            ) : (
+              <>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="#4285F4"
+                    d="M21.35 12.27c0-.71-.06-1.4-.18-2.06H12v3.9h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.23Z"
+                  />
+
+                  <path
+                    fill="#34A853"
+                    d="M12 21.99c2.63 0 4.84-.87 6.45-2.49l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.99Z"
+                  />
+
+                  <path
+                    fill="#FBBC05"
+                    d="M6.54 13.95A5.86 5.86 0 0 1 6.23 12c0-.68.12-1.34.31-1.95V7.52H3.3A9.99 9.99 0 0 0 2.25 12c0 1.61.39 3.13 1.05 4.48l3.24-2.53Z"
+                  />
+
+                  <path
+                    fill="#EA4335"
+                    d="M12 6.02c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.05 14.63 2 12 2a9.74 9.74 0 0 0-8.7 5.52l3.24 2.53C7.31 7.74 9.46 6.02 12 6.02Z"
+                  />
+                </svg>
+
+                Continue with Google
+              </>
+            )}
+          </button>
+
+          {/* DIVIDER */}
+
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-zinc-200" />
+
+            <span className="text-xs text-zinc-500">
+              OR
+            </span>
+
+            <div className="h-px flex-1 bg-zinc-200" />
+          </div>
+
+          {/* REGISTER FORM */}
+
           <form
             onSubmit={handleRegister}
-            className="mt-6 space-y-5"
+            className="space-y-5"
           >
 
             {/* FULL NAME */}
 
             <div>
-
               <label
                 htmlFor="fullName"
                 className="mb-2 block text-sm font-bold text-zinc-900"
@@ -194,13 +244,11 @@ export default function RegisterPage() {
                 autoComplete="name"
                 className="w-full rounded-md border border-zinc-500 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
               />
-
             </div>
 
             {/* EMAIL */}
 
             <div>
-
               <label
                 htmlFor="email"
                 className="mb-2 block text-sm font-bold text-zinc-900"
@@ -220,13 +268,11 @@ export default function RegisterPage() {
                 autoComplete="email"
                 className="w-full rounded-md border border-zinc-500 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
               />
-
             </div>
 
             {/* MOBILE NUMBER */}
 
             <div>
-
               <label
                 htmlFor="phone"
                 className="mb-2 block text-sm font-bold text-zinc-900"
@@ -235,7 +281,6 @@ export default function RegisterPage() {
               </label>
 
               <div className="flex">
-
                 <div className="flex items-center rounded-l-md border border-r-0 border-zinc-500 bg-zinc-50 px-3 text-sm font-medium text-zinc-700">
                   +91
                 </div>
@@ -257,20 +302,17 @@ export default function RegisterPage() {
                   autoComplete="tel"
                   className="w-full rounded-r-md border border-zinc-500 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
                 />
-
               </div>
 
               <p className="mt-2 text-xs text-zinc-500">
                 Your mobile number will be saved
                 with your account.
               </p>
-
             </div>
 
             {/* PASSWORD */}
 
             <div>
-
               <label
                 htmlFor="password"
                 className="mb-2 block text-sm font-bold text-zinc-900"
@@ -295,13 +337,11 @@ export default function RegisterPage() {
               <p className="mt-2 text-xs text-zinc-500">
                 Minimum 6 characters
               </p>
-
             </div>
 
             {/* CONFIRM PASSWORD */}
 
             <div>
-
               <label
                 htmlFor="confirmPassword"
                 className="mb-2 block text-sm font-bold text-zinc-900"
@@ -314,16 +354,13 @@ export default function RegisterPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) =>
-                  setConfirmPassword(
-                    e.target.value
-                  )
+                  setConfirmPassword(e.target.value)
                 }
                 placeholder="Enter password again"
                 required
                 autoComplete="new-password"
                 className="w-full rounded-md border border-zinc-500 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
               />
-
             </div>
 
             {/* ERROR */}
@@ -353,7 +390,6 @@ export default function RegisterPage() {
                 ? "Creating account..."
                 : "Create account"}
             </button>
-
           </form>
 
           {/* INFO */}
@@ -363,7 +399,6 @@ export default function RegisterPage() {
             your profile and keep track of your
             orders.
           </p>
-
         </div>
 
         {/* LOGIN */}
@@ -371,7 +406,6 @@ export default function RegisterPage() {
         <div className="mt-7">
 
           <div className="flex items-center gap-3">
-
             <div className="h-px flex-1 bg-zinc-200" />
 
             <span className="text-xs text-zinc-500">
@@ -379,7 +413,6 @@ export default function RegisterPage() {
             </span>
 
             <div className="h-px flex-1 bg-zinc-200" />
-
           </div>
 
           <Link
@@ -388,7 +421,6 @@ export default function RegisterPage() {
           >
             Sign in to your account
           </Link>
-
         </div>
 
         {/* BACK */}
@@ -401,7 +433,6 @@ export default function RegisterPage() {
         </Link>
 
       </div>
-
     </main>
   );
 }

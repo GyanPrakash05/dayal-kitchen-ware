@@ -3,6 +3,7 @@ import ProductCardImage from "./components/ProductCardImage";
 import MobileBottomNav from "./components/MobileBottomNav";
 import AuthButton from "./components/AuthButton";
 import { CartProvider } from "./context/CartContext";
+import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 
 
 export const dynamic = "force-dynamic";
@@ -81,10 +82,12 @@ export default async function Home({
      GET PRODUCTS
   ======================================================= */
 
-  const { data: allProducts, error } = await supabase
-    .from("products")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const supabase = await createServerSupabaseClient();
+
+const { data: allProducts, error } = await supabase
+  .from("products")
+  .select("*")
+  .order("created_at", { ascending: false });
 
   if (error) {
     console.error("PRODUCT FETCH ERROR:", error);

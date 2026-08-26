@@ -15,8 +15,72 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dayal Kitchen Ware",
-  description: "Quality kitchenware for every home",
+  metadataBase: new URL("https://dayal-kitchen-ware.vercel.app"),
+
+  title: {
+    default: "Dayal Kitchen Ware | Kitchenware & Home Essentials",
+    template: "%s | Dayal Kitchen Ware",
+  },
+
+  description:
+    "Shop quality kitchenware, cookware, kitchen essentials and home products from Dayal Kitchen Ware.",
+
+  keywords: [
+    "Dayal Kitchen Ware",
+    "kitchenware",
+    "kitchen utensils",
+    "cookware",
+    "kitchen essentials",
+    "pressure cooker",
+    "non stick cookware",
+    "kitchen products",
+  ],
+
+  authors: [
+    {
+      name: "Dayal Kitchen Ware",
+    },
+  ],
+
+  creator: "Dayal Kitchen Ware",
+  publisher: "Dayal Kitchen Ware",
+
+  alternates: {
+    canonical: "https://dayal-kitchen-ware.vercel.app",
+  },
+
+  openGraph: {
+    type: "website",
+    url: "https://dayal-kitchen-ware.vercel.app",
+    title: "Dayal Kitchen Ware | Kitchenware & Home Essentials",
+    description:
+      "Shop quality kitchenware, cookware, kitchen essentials and home products from Dayal Kitchen Ware.",
+    siteName: "Dayal Kitchen Ware",
+    locale: "en_IN",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Dayal Kitchen Ware | Kitchenware & Home Essentials",
+    description:
+      "Shop quality kitchenware, cookware, kitchen essentials and home products from Dayal Kitchen Ware.",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
