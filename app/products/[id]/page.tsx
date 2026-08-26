@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
+import type { Metadata } from "next";
+
 
 import ProductGallery from "@/app/components/ProductGallery";
 import AddToCartButton from "@/app/components/AddToCartButton";
@@ -10,6 +12,133 @@ type ProductPageProps = {
   }>;
 };
 
+export async function generateMetadata({
+  params,
+}: ProductPageProps): Promise<Metadata> {
+  const { id } = await params;
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("name, description, image, price, category, slug")
+    .eq("slug", id)
+    .single();
+
+  if (!product) {
+    return {
+      title: "Product Not Found | Dayal Kitchen Ware",
+      description: "The requested product could not be found.",
+    };
+  }
+
+  const baseUrl =
+    "https://dayal-kitchen-ware.vercel.app";
+
+  const productUrl =
+    `${baseUrl}/products/${product.slug}`;
+
+  const description =
+    product.description?.slice(0, 160) ||
+    `Buy ${product.name} from Dayal Kitchen Ware. Quality kitchenware and home products.`;
+
+  return {
+    title: `${product.name} | Dayal Kitchen Ware`,
+
+    description,
+
+    keywords: [
+      product.name,
+      product.category,
+      "Dayal Kitchen Ware",
+      "kitchenware",
+      "kitchen products",
+      "cookware",
+    ],
+
+    alternates: {
+      canonical: productUrl,
+    },
+
+    openGraph: {
+      title: `${product.name} | Dayal Kitchen Ware`,
+      description,
+      url: productUrl,
+      siteName: "Dayal Kitchen Ware",
+      type: "website",
+      images: product.image
+        ? [
+            {
+              url: product.image,
+              alt: product.name,
+            },
+          ]
+        : [],
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} | Dayal Kitchen Ware`,
+      description,
+      images: product.image ? [product.image] : [],
+    },
+
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
+function ProductSchema({ product }: { product: any }) {
+  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
+
+  const productUrl = `${baseUrl}/products/${product.slug}`;
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+
+    name: product.name,
+
+    description:
+      product.description ||
+      `Buy ${product.name} from Dayal Kitchen Ware.`,
+
+    image: product.image ? [product.image] : [],
+
+    url: productUrl,
+
+    brand: {
+      "@type": "Brand",
+      name: "Dayal Kitchen Ware",
+    },
+
+    offers: {
+      "@type": "Offer",
+
+      url: productUrl,
+
+      priceCurrency: "INR",
+
+      price: Number(product.price),
+
+      availability:
+        "https://schema.org/InStock",
+
+      seller: {
+        "@type": "Organization",
+        name: "Dayal Kitchen Ware",
+      },
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(schema),
+      }}
+    />
+  );
+}
 export default async function ProductPage({
   params,
 }: ProductPageProps) {
@@ -43,6 +172,7 @@ Please share more details and availability.`;
   return (
     <main className="min-h-screen bg-[#faf9f6] text-zinc-900">
 
+    <ProductSchema product={product} />
       {/* ================================================= */}
       {/* NAVBAR */}
       {/* ================================================= */}

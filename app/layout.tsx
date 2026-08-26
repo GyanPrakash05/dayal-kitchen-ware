@@ -100,7 +100,32 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col">git 
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Dayal Kitchen Ware",
+              url: "https://dayal-kitchen-ware.vercel.app",
+              description: "Quality kitchenware for every home.",
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Store",
+              name: "Dayal Kitchen Ware",
+              url: "https://dayal-kitchen-ware.vercel.app",
+              description: "Kitchenware, cookware and home lifestyle products.",
+              priceRange: "₹₹",
+            }),
+          }}
+        />
         <CartProvider>
           {children}
           <FloatingWhatsApp />
