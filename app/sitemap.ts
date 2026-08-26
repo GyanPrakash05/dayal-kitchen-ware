@@ -4,19 +4,25 @@ import { supabase } from "./lib/supabase";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://dayal-kitchen-ware.vercel.app";
 
-  const { data: products } = await supabase
+  const { data: products, error } = await supabase
     .from("products")
-    .select("id, created_at");
+    .select("slug, created_at");
+
+  if (error) {
+    console.error("SITEMAP PRODUCT ERROR:", error);
+  }
 
   const productUrls =
-    products?.map((product) => ({
-      url: `${baseUrl}/products/${product.id}`,
-      lastModified: product.created_at
-        ? new Date(product.created_at)
-        : new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    })) || [];
+    products
+      ?.filter((product) => product.slug)
+      .map((product) => ({
+        url: `${baseUrl}/products/${product.slug}`,
+        lastModified: product.created_at
+          ? new Date(product.created_at)
+          : new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      })) || [];
 
   return [
     {
@@ -25,21 +31,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
+
     {
       url: `${baseUrl}/login`,
       changeFrequency: "monthly",
       priority: 0.3,
     },
+
     {
       url: `${baseUrl}/register`,
       changeFrequency: "monthly",
       priority: 0.3,
     },
+
     {
       url: `${baseUrl}/cart`,
       changeFrequency: "weekly",
       priority: 0.4,
     },
+
     ...productUrls,
   ];
 }
