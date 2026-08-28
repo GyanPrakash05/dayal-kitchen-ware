@@ -82,73 +82,16 @@ const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent
 )}`;
 
 const mapsLink = "https://maps.app.goo.gl/qBMv1Kw6MHiDPJXw7";
-function LocalBusinessSchema() {
-  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
 
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "Store",
-    "@id": `${baseUrl}/#localbusiness`,
-
-    name: "Dayal Kitchen Ware",
-
-    url: baseUrl,
-
-    description:
-      "Dayal Kitchen Ware is a local kitchenware store offering cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials.",
-
-    telephone: "+91 70118 72380",
-
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: "L42, Som Bazar Rd, Block A, Raja Puri, Matiala",
-      addressLocality: "New Delhi",
-      addressRegion: "Delhi",
-      postalCode: "110059",
-      addressCountry: "IN",
-    },
-
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: 28.605567,
-      longitude: 77.0567969,
-    },
-
-    hasMap:
-      "https://www.google.com/maps/place/Dayal+Kitchen+Ware/@28.605567,77.054222,17z",
-
-    areaServed: {
-      "@type": "City",
-      name: "New Delhi",
-    },
-
-    priceRange: "₹₹",
-
-    knowsAbout: [
-      "Kitchenware",
-      "Cookware",
-      "Pressure Cookers",
-      "Water Bottles",
-      "Dinner Sets",
-      "Kitchen Tools",
-    ],
-  };
-
-  return (
-
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(schema),
-      }}
-    />
-  );
-}
-
+   
 const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
 
 /* =========================================================
    WEBSITE + LOCAL BUSINESS SCHEMA
+========================================================= */
+
+/* =========================================================
+   WEBSITE + ORGANIZATION + LOCAL BUSINESS SCHEMA
 ========================================================= */
 
 function BusinessSchema() {
@@ -169,6 +112,10 @@ function BusinessSchema() {
           "Kitchenware, cookware and everyday kitchen essentials from Dayal Kitchen Ware.",
 
         inLanguage: "en-IN",
+
+        publisher: {
+          "@id": `${BASE_URL}/#organization`,
+        },
       },
 
       {
@@ -181,13 +128,28 @@ function BusinessSchema() {
         url: BASE_URL,
 
         description:
-          "Dayal Kitchen Ware offers kitchenware, cookware, pressure cookers, bottles, dinner sets and kitchen essentials.",
+          "Dayal Kitchen Ware offers kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials.",
 
         telephone: "+91-7011872380",
+
+        address: {
+          "@type": "PostalAddress",
+
+          streetAddress:
+            "L42, Som Bazar Rd, Block A, Raja Puri, Matiala",
+
+          addressLocality: "New Delhi",
+
+          addressRegion: "Delhi",
+
+          postalCode: "110059",
+
+          addressCountry: "IN",
+        },
       },
 
       {
-        "@type": "LocalBusiness",
+        "@type": "Store",
 
         "@id": `${BASE_URL}/#localbusiness`,
 
@@ -195,19 +157,60 @@ function BusinessSchema() {
 
         url: BASE_URL,
 
-        telephone: "+91-7011872380",
-
         description:
-          "Local kitchenware store offering cookware, pressure cookers, bottles, dinner sets, kitchen tools and everyday kitchen essentials.",
+          "Dayal Kitchen Ware is a local kitchenware store offering cookware, pressure cookers, bottles, dinner sets, kitchen tools and everyday kitchen essentials.",
+
+        telephone: "+91-7011872380",
 
         priceRange: "₹₹",
 
-        sameAs: [mapsLink],
+        image: `${BASE_URL}/og-image.jpg`,
+
+        address: {
+          "@type": "PostalAddress",
+
+          streetAddress:
+            "L42, Som Bazar Rd, Block A, Raja Puri, Matiala",
+
+          addressLocality: "New Delhi",
+
+          addressRegion: "Delhi",
+
+          postalCode: "110059",
+
+          addressCountry: "IN",
+        },
+
+        geo: {
+          "@type": "GeoCoordinates",
+
+          latitude: 28.605567,
+
+          longitude: 77.0567969,
+        },
+
+        hasMap:
+          "https://www.google.com/maps/place/Dayal+Kitchen+Ware/@28.605567,77.054222,17z",
 
         areaServed: {
-          "@type": "Country",
-          name: "India",
+          "@type": "City",
+
+          name: "New Delhi",
         },
+
+        sameAs: [
+          mapsLink,
+        ],
+
+        knowsAbout: [
+          "Kitchenware",
+          "Cookware",
+          "Pressure Cookers",
+          "Water Bottles",
+          "Dinner Sets",
+          "Kitchen Tools",
+          "Kitchen Essentials",
+        ],
       },
     ],
   };
@@ -390,7 +393,7 @@ export default async function Home({
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 text-zinc-900 md:pb-0">
-      <LocalBusinessSchema />
+    
 
       {/* =====================================================
           SEO STRUCTURED DATA
