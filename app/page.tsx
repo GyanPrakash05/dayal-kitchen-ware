@@ -4,30 +4,69 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import AuthButton from "./components/AuthButton";
 import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://dayal-kitchen-ware.vercel.app"),
+const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
+const WHATSAPP_NUMBER = "917011872380";
 
-  title: "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
+const STORE_NAME = "Dayal Kitchen Ware";
+
+const STORE_ADDRESS = {
+  streetAddress: "L42, Som Bazar Rd, Block A, Raja Puri, Matiala",
+  addressLocality: "New Delhi",
+  addressRegion: "Delhi",
+  postalCode: "110059",
+  addressCountry: "IN",
+};
+
+const STORE_LATITUDE = 28.605567;
+const STORE_LONGITUDE = 77.0567969;
+
+const mapsLink =
+  "https://maps.app.goo.gl/qBMv1Kw6MHiDPJXw7";
+
+const whatsappMessage =
+  "Hello Dayal Kitchen Ware 👋 I have a query about your products.";
+
+const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  whatsappMessage
+)}`;
+
+/* =========================================================
+   SEO METADATA
+========================================================= */
+
+export const metadata: Metadata = {
+  metadataBase: new URL(BASE_URL),
+
+  title: {
+    default:
+      "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
+    template: "%s | Dayal Kitchen Ware",
+  },
 
   description:
-    "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+    "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware in New Delhi.",
 
   keywords: [
     "Dayal Kitchen Ware",
     "kitchenware",
     "cookware",
     "kitchen products",
+    "kitchen essentials",
     "pressure cooker",
+    "cookware sets",
     "kitchen tools",
     "dinner sets",
     "water bottles",
-    "kitchen essentials",
-    "cookware sets",
     "kitchen store",
+    "kitchenware store Delhi",
+    "kitchenware store New Delhi",
+    "cookware store Delhi",
+    "kitchen products Raja Puri",
+    "kitchenware Matiala",
   ],
 
   alternates: {
-    canonical: "https://dayal-kitchen-ware.vercel.app/",
+    canonical: BASE_URL,
   },
 
   openGraph: {
@@ -35,11 +74,11 @@ export const metadata: Metadata = {
       "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
 
     description:
-      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware in New Delhi.",
 
-    url: "https://dayal-kitchen-ware.vercel.app/",
+    url: BASE_URL,
 
-    siteName: "Dayal Kitchen Ware",
+    siteName: STORE_NAME,
 
     type: "website",
 
@@ -53,7 +92,7 @@ export const metadata: Metadata = {
       "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
 
     description:
-      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware in New Delhi.",
   },
 
   robots: {
@@ -72,24 +111,6 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-const WHATSAPP_NUMBER = "917011872380";
-
-const whatsappMessage =
-  "Hello Dayal Kitchen Ware 👋 I have a query about your products.";
-
-const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  whatsappMessage
-)}`;
-
-const mapsLink = "https://maps.app.goo.gl/qBMv1Kw6MHiDPJXw7";
-
-   
-const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
-
-/* =========================================================
-   WEBSITE + LOCAL BUSINESS SCHEMA
-========================================================= */
-
 /* =========================================================
    WEBSITE + ORGANIZATION + LOCAL BUSINESS SCHEMA
 ========================================================= */
@@ -106,7 +127,7 @@ function BusinessSchema() {
 
         url: BASE_URL,
 
-        name: "Dayal Kitchen Ware",
+        name: STORE_NAME,
 
         description:
           "Kitchenware, cookware and everyday kitchen essentials from Dayal Kitchen Ware.",
@@ -123,7 +144,7 @@ function BusinessSchema() {
 
         "@id": `${BASE_URL}/#organization`,
 
-        name: "Dayal Kitchen Ware",
+        name: STORE_NAME,
 
         url: BASE_URL,
 
@@ -135,16 +156,15 @@ function BusinessSchema() {
         address: {
           "@type": "PostalAddress",
 
-          streetAddress:
-            "L42, Som Bazar Rd, Block A, Raja Puri, Matiala",
+          streetAddress: STORE_ADDRESS.streetAddress,
 
-          addressLocality: "New Delhi",
+          addressLocality: STORE_ADDRESS.addressLocality,
 
-          addressRegion: "Delhi",
+          addressRegion: STORE_ADDRESS.addressRegion,
 
-          postalCode: "110059",
+          postalCode: STORE_ADDRESS.postalCode,
 
-          addressCountry: "IN",
+          addressCountry: STORE_ADDRESS.addressCountry,
         },
       },
 
@@ -153,53 +173,53 @@ function BusinessSchema() {
 
         "@id": `${BASE_URL}/#localbusiness`,
 
-        name: "Dayal Kitchen Ware",
+        name: STORE_NAME,
 
         url: BASE_URL,
 
-        description:
-          "Dayal Kitchen Ware is a local kitchenware store offering cookware, pressure cookers, bottles, dinner sets, kitchen tools and everyday kitchen essentials.",
-
         telephone: "+91-7011872380",
+
+        description:
+          "Dayal Kitchen Ware is a local kitchenware store in New Delhi offering cookware, pressure cookers, bottles, dinner sets, kitchen tools and everyday kitchen essentials.",
 
         priceRange: "₹₹",
 
-        image: `${BASE_URL}/og-image.jpg`,
+        image: `${BASE_URL}/icon.png`,
 
         address: {
           "@type": "PostalAddress",
 
-          streetAddress:
-            "L42, Som Bazar Rd, Block A, Raja Puri, Matiala",
+          streetAddress: STORE_ADDRESS.streetAddress,
 
-          addressLocality: "New Delhi",
+          addressLocality: STORE_ADDRESS.addressLocality,
 
-          addressRegion: "Delhi",
+          addressRegion: STORE_ADDRESS.addressRegion,
 
-          postalCode: "110059",
+          postalCode: STORE_ADDRESS.postalCode,
 
-          addressCountry: "IN",
+          addressCountry: STORE_ADDRESS.addressCountry,
         },
 
         geo: {
           "@type": "GeoCoordinates",
 
-          latitude: 28.605567,
+          latitude: STORE_LATITUDE,
 
-          longitude: 77.0567969,
+          longitude: STORE_LONGITUDE,
         },
 
         hasMap:
           "https://www.google.com/maps/place/Dayal+Kitchen+Ware/@28.605567,77.054222,17z",
 
-        areaServed: {
-          "@type": "City",
-
-          name: "New Delhi",
-        },
-
-        sameAs: [
-          mapsLink,
+        areaServed: [
+          {
+            "@type": "City",
+            name: "New Delhi",
+          },
+          {
+            "@type": "AdministrativeArea",
+            name: "Delhi",
+          },
         ],
 
         knowsAbout: [
@@ -211,6 +231,10 @@ function BusinessSchema() {
           "Kitchen Tools",
           "Kitchen Essentials",
         ],
+
+        parentOrganization: {
+          "@id": `${BASE_URL}/#organization`,
+        },
       },
     ],
   };
@@ -393,7 +417,6 @@ export default async function Home({
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 text-zinc-900 md:pb-0">
-    
 
       {/* =====================================================
           SEO STRUCTURED DATA
@@ -1469,8 +1492,8 @@ Please share more details and availability.`
                     </p>
 
                     <p className="mt-1 text-sm leading-6 text-zinc-500">
-                      Visit our store for kitchenware, cookware,
-                      bottles, dinner sets and more.
+                      L42, Som Bazar Rd, Block A, Raja Puri,
+                      Matiala, New Delhi, Delhi, 110059
                     </p>
 
                   </div>
