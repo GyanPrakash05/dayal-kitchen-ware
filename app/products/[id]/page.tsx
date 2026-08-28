@@ -5,12 +5,25 @@ import type { Metadata } from "next";
 
 import ProductGallery from "@/app/components/ProductGallery";
 import AddToCartButton from "@/app/components/AddToCartButton";
+export const revalidate = 3600;
 
 type ProductPageProps = {
   params: Promise<{
     id: string;
   }>;
 };
+
+export async function generateStaticParams() {
+  const { data: products } = await supabase
+    .from("products")
+    .select("slug");
+
+  return (
+    products?.map((product) => ({
+      id: product.slug,
+    })) || []
+  );
+}
 
 export async function generateMetadata({
   params,
@@ -96,7 +109,7 @@ function ProductSchema({ product }: { product: any }) {
     "@context": "https://schema.org",
     "@type": "Product",
 
-    name: product.name,
+    category: product.category,
 
     description:
       product.description ||

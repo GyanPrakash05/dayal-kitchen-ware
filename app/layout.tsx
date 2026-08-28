@@ -48,8 +48,8 @@ export const metadata: Metadata = {
   publisher: "Dayal Kitchen Ware",
 
   alternates: {
-    canonical: "https://dayal-kitchen-ware.vercel.app",
-  },
+  canonical: "https://dayal-kitchen-ware.vercel.app/",
+},
 
   verification: {
     google:
@@ -100,7 +100,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">git 
+      <body className="min-h-full flex flex-col">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

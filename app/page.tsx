@@ -1,4 +1,4 @@
-import { supabase } from "./lib/supabase";
+import type { Metadata } from "next";
 import ProductCardImage from "./components/ProductCardImage";
 import MobileBottomNav from "./components/MobileBottomNav";
 import AuthButton from "./components/AuthButton";
@@ -6,8 +6,20 @@ import { CartProvider } from "./context/CartContext";
 import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "Dayal Kitchen Ware | Kitchenware, Cookware & Home Essentials",
+  description:
+    "Shop quality kitchenware, cookware, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+  alternates: {
+    canonical: "https://dayal-kitchen-ware.vercel.app/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 const WHATSAPP_NUMBER = "917011872380";
 
