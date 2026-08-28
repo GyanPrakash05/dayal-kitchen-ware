@@ -18,9 +18,14 @@ type ProductPageProps = {
 ========================================================= */
 
 export async function generateStaticParams() {
-  const { data: products } = await supabase
+  const { data: products, error } = await supabase
     .from("products")
     .select("slug");
+
+  if (error) {
+    console.error("STATIC PRODUCT PATH ERROR:", error);
+    return [];
+  }
 
   return (
     products?.map((product) => ({
@@ -38,17 +43,21 @@ export async function generateMetadata({
 }: ProductPageProps): Promise<Metadata> {
   const { id } = await params;
 
-  const { data: product } = await supabase
+  const { data: product, error } = await supabase
     .from("products")
-    .select("name, description, image, price, category, slug")
+    .select(
+      "name, description, image, price, category, slug, brand"
+    )
     .eq("slug", id)
     .single();
 
-  if (!product) {
+  if (error || !product) {
     return {
       title: "Product Not Found | Dayal Kitchen Ware",
+
       description:
         "The requested product could not be found.",
+
       robots: {
         index: false,
         follow: false,
@@ -81,7 +90,7 @@ export async function generateMetadata({
       "cookware",
       "pressure cooker",
       "kitchen utensils",
-    ],
+    ].filter(Boolean),
 
     alternates: {
       canonical: productUrl,
@@ -89,10 +98,15 @@ export async function generateMetadata({
 
     openGraph: {
       title: `${product.name} | Dayal Kitchen Ware`,
+
       description,
+
       url: productUrl,
+
       siteName: "Dayal Kitchen Ware",
+
       type: "website",
+
       locale: "en_IN",
 
       images: product.image
@@ -107,8 +121,11 @@ export async function generateMetadata({
 
     twitter: {
       card: "summary_large_image",
+
       title: `${product.name} | Dayal Kitchen Ware`,
+
       description,
+
       images: product.image
         ? [product.image]
         : [],
@@ -146,11 +163,12 @@ function ProductSchema({
 
   const schema = {
     "@context": "https://schema.org",
+
     "@type": "Product",
 
     name: product.name,
 
-    category: product.category,
+    category: product.category || undefined,
 
     description:
       product.description ||
@@ -183,9 +201,15 @@ function ProductSchema({
       availability:
         "https://schema.org/InStock",
 
+      itemCondition:
+        "https://schema.org/NewCondition",
+
       seller: {
         "@type": "Organization",
+
         name: "Dayal Kitchen Ware",
+
+        url: baseUrl,
       },
     },
   };
@@ -217,27 +241,37 @@ function BreadcrumbSchema({
 
   const schema = {
     "@context": "https://schema.org",
+
     "@type": "BreadcrumbList",
 
     itemListElement: [
       {
         "@type": "ListItem",
+
         position: 1,
+
         name: "Home",
-        item: baseUrl,
+
+        item: `${baseUrl}/`,
       },
 
       {
         "@type": "ListItem",
+
         position: 2,
+
         name: "Products",
+
         item: `${baseUrl}/#products`,
       },
 
       {
         "@type": "ListItem",
+
         position: 3,
+
         name: product.name,
+
         item: productUrl,
       },
     ],
@@ -278,6 +312,25 @@ export default async function ProductPage({
   }
 
   /* =======================================================
+     SAFE VALUES FOR COMPONENTS
+  ======================================================= */
+
+  const productImage =
+    product.image ?? null;
+
+  const productImages =
+    product.images ?? null;
+
+  const productPrice =
+    Number(product.price);
+
+  const productName =
+    product.name ?? "Product";
+
+  const productSlug =
+    product.slug ?? id;
+
+  /* =======================================================
      WHATSAPP
   ======================================================= */
 
@@ -285,9 +338,9 @@ export default async function ProductPage({
 
 I am interested in:
 
-${product.name}
+${productName}
 
-Price: ₹${product.price}
+Price: ₹${productPrice}
 
 Please share more details and availability.`;
 
@@ -362,9 +415,9 @@ Please share more details and availability.`;
           ================================================= */}
 
           <ProductGallery
-            name={product.name}
-            image={product.image}
-            images={product.images}
+            name={productName}
+            image={productImage}
+            images={productImages}
           />
 
           {/* =================================================
@@ -390,7 +443,7 @@ Please share more details and availability.`;
             {/* PRODUCT NAME */}
 
             <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-              {product.name}
+              {productName}
             </h1>
 
             {/* PRICE */}
@@ -398,15 +451,16 @@ Please share more details and availability.`;
             <div className="mt-6 flex items-center gap-4">
 
               <span className="text-3xl font-bold">
-                ₹{product.price}
+                ₹{productPrice}
               </span>
 
-              {product.old_price &&
+              {product.old_price !== null &&
+                product.old_price !== undefined &&
                 Number(product.old_price) >
-                  Number(product.price) && (
+                  productPrice && (
 
                 <span className="text-lg text-zinc-400 line-through">
-                  ₹{product.old_price}
+                  ₹{Number(product.old_price)}
                 </span>
 
               )}
@@ -448,10 +502,10 @@ Please share more details and availability.`;
 
               <AddToCartButton
                 product={{
-                  name: product.name,
-                  slug: product.slug,
-                  price: product.price,
-                  image: product.image,
+                  name: productName,
+                  slug: productSlug,
+                  price: productPrice,
+                  image: productImage,
                 }}
               />
 
