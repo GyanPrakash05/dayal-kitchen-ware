@@ -1,3 +1,4 @@
+import { supabase } from "./lib/supabase";
 import type { Metadata } from "next";
 import ProductCardImage from "./components/ProductCardImage";
 import MobileBottomNav from "./components/MobileBottomNav";
@@ -5,22 +6,48 @@ import AuthButton from "./components/AuthButton";
 import { CartProvider } from "./context/CartContext";
 import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 
-
-export const revalidate = 3600;
-
 export const metadata: Metadata = {
-  title: "Dayal Kitchen Ware | Kitchenware, Cookware & Home Essentials",
+  title:
+    "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
+
   description:
-    "Shop quality kitchenware, cookware, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+    "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+
   alternates: {
     canonical: "https://dayal-kitchen-ware.vercel.app/",
   },
+
+  openGraph: {
+    title:
+      "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
+
+    description:
+      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+
+    url: "https://dayal-kitchen-ware.vercel.app/",
+
+    siteName: "Dayal Kitchen Ware",
+
+    type: "website",
+
+    locale: "en_IN",
+  },
+
   robots: {
     index: true,
     follow: true,
+
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
+export const revalidate = 3600;
 const WHATSAPP_NUMBER = "917011872380";
 
 const whatsappMessage =
