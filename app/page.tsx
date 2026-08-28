@@ -1,17 +1,30 @@
-import { supabase } from "./lib/supabase";
 import type { Metadata } from "next";
 import ProductCardImage from "./components/ProductCardImage";
 import MobileBottomNav from "./components/MobileBottomNav";
 import AuthButton from "./components/AuthButton";
-import { CartProvider } from "./context/CartContext";
 import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 
 export const metadata: Metadata = {
-  title:
-    "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
+  metadataBase: new URL("https://dayal-kitchen-ware.vercel.app"),
+
+  title: "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
 
   description:
     "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+
+  keywords: [
+    "Dayal Kitchen Ware",
+    "kitchenware",
+    "cookware",
+    "kitchen products",
+    "pressure cooker",
+    "kitchen tools",
+    "dinner sets",
+    "water bottles",
+    "kitchen essentials",
+    "cookware sets",
+    "kitchen store",
+  ],
 
   alternates: {
     canonical: "https://dayal-kitchen-ware.vercel.app/",
@@ -33,6 +46,16 @@ export const metadata: Metadata = {
     locale: "en_IN",
   },
 
+  twitter: {
+    card: "summary_large_image",
+
+    title:
+      "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
+
+    description:
+      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware.",
+  },
+
   robots: {
     index: true,
     follow: true,
@@ -48,6 +71,7 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 3600;
+
 const WHATSAPP_NUMBER = "917011872380";
 
 const whatsappMessage =
@@ -58,6 +82,83 @@ const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent
 )}`;
 
 const mapsLink = "https://maps.app.goo.gl/qBMv1Kw6MHiDPJXw7";
+
+const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
+
+/* =========================================================
+   WEBSITE + LOCAL BUSINESS SCHEMA
+========================================================= */
+
+function BusinessSchema() {
+  const schema = {
+    "@context": "https://schema.org",
+
+    "@graph": [
+      {
+        "@type": "WebSite",
+
+        "@id": `${BASE_URL}/#website`,
+
+        url: BASE_URL,
+
+        name: "Dayal Kitchen Ware",
+
+        description:
+          "Kitchenware, cookware and everyday kitchen essentials from Dayal Kitchen Ware.",
+
+        inLanguage: "en-IN",
+      },
+
+      {
+        "@type": "Organization",
+
+        "@id": `${BASE_URL}/#organization`,
+
+        name: "Dayal Kitchen Ware",
+
+        url: BASE_URL,
+
+        description:
+          "Dayal Kitchen Ware offers kitchenware, cookware, pressure cookers, bottles, dinner sets and kitchen essentials.",
+
+        telephone: "+91-7011872380",
+      },
+
+      {
+        "@type": "LocalBusiness",
+
+        "@id": `${BASE_URL}/#localbusiness`,
+
+        name: "Dayal Kitchen Ware",
+
+        url: BASE_URL,
+
+        telephone: "+91-7011872380",
+
+        description:
+          "Local kitchenware store offering cookware, pressure cookers, bottles, dinner sets, kitchen tools and everyday kitchen essentials.",
+
+        priceRange: "₹₹",
+
+        sameAs: [mapsLink],
+
+        areaServed: {
+          "@type": "Country",
+          name: "India",
+        },
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(schema),
+      }}
+    />
+  );
+}
 
 /* =========================================================
    CATEGORIES
@@ -71,6 +172,7 @@ const categories = [
     fallback: "🥤",
     image: null,
   },
+
   {
     name: "Cookware",
     title: "Cookware",
@@ -78,6 +180,7 @@ const categories = [
     fallback: "🍳",
     image: null,
   },
+
   {
     name: "Kitchen Tools",
     title: "Kitchen Tools",
@@ -86,6 +189,7 @@ const categories = [
     image:
       "https://fns.co.in/cdn/shop/files/montavo-stainless-steel-serving-tools-elegant-kitchen-flat-lay.jpg?v=1763804653",
   },
+
   {
     name: "Dinner Sets",
     title: "Dinner Sets",
@@ -115,6 +219,7 @@ export default async function Home({
   } = await searchParams;
 
   const cleanSearchQuery = searchQuery?.trim() || "";
+
   const cleanCategoryQuery = categoryQuery?.trim() || "";
 
   /* =======================================================
@@ -123,10 +228,10 @@ export default async function Home({
 
   const supabase = await createServerSupabaseClient();
 
-const { data: allProducts, error } = await supabase
-  .from("products")
-  .select("*")
-  .order("created_at", { ascending: false });
+  const { data: allProducts, error } = await supabase
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("PRODUCT FETCH ERROR:", error);
@@ -157,8 +262,11 @@ const { data: allProducts, error } = await supabase
 
     filteredProducts = filteredProducts.filter((product) => {
       const name = product.name?.toLowerCase() || "";
+
       const category = product.category?.toLowerCase() || "";
-      const description = product.description?.toLowerCase() || "";
+
+      const description =
+        product.description?.toLowerCase() || "";
 
       return (
         name.includes(query) ||
@@ -222,10 +330,17 @@ const { data: allProducts, error } = await supabase
     <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 text-zinc-900 md:pb-0">
 
       {/* =====================================================
+          SEO STRUCTURED DATA
+      ===================================================== */}
+
+      <BusinessSchema />
+
+      {/* =====================================================
           NAVBAR
       ===================================================== */}
 
       <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-[#fffdf9]/95 backdrop-blur-xl">
+
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
 
           <div className="flex items-center justify-between gap-4">
@@ -235,6 +350,7 @@ const { data: allProducts, error } = await supabase
             <a
               href="/"
               className="block shrink-0 transition-opacity hover:opacity-80"
+              aria-label="Dayal Kitchen Ware Home"
             >
               <h1 className="text-[15px] font-bold tracking-tight sm:text-xl">
                 DAYAL KITCHEN WARE
@@ -249,7 +365,10 @@ const { data: allProducts, error } = await supabase
 
             <div className="hidden items-center gap-5 md:flex">
 
-              <nav className="flex items-center gap-5 text-sm font-medium lg:gap-7">
+              <nav
+                aria-label="Main navigation"
+                className="flex items-center gap-5 text-sm font-medium lg:gap-7"
+              >
 
                 <a
                   href="#home"
@@ -301,6 +420,7 @@ const { data: allProducts, error } = await supabase
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     strokeWidth={2}
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -314,6 +434,7 @@ const { data: allProducts, error } = await supabase
                     name="search"
                     defaultValue={cleanSearchQuery}
                     placeholder="Search products..."
+                    aria-label="Search products"
                     className="w-36 bg-transparent px-2.5 py-2 text-sm outline-none placeholder:text-zinc-400 lg:w-44"
                   />
 
@@ -338,6 +459,7 @@ const { data: allProducts, error } = await supabase
               >
                 WhatsApp Us
               </a>
+
               <AuthButton />
 
             </div>
@@ -355,6 +477,7 @@ const { data: allProducts, error } = await supabase
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -367,7 +490,10 @@ const { data: allProducts, error } = await supabase
 
               <div className="absolute right-0 top-12 w-[calc(100vw-32px)] max-w-80 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xl">
 
-                <nav className="flex flex-col">
+                <nav
+                  aria-label="Mobile navigation"
+                  className="flex flex-col"
+                >
 
                   <a
                     href="#home"
@@ -418,6 +544,7 @@ const { data: allProducts, error } = await supabase
                     method="GET"
                     className="mt-2"
                   >
+
                     <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-50 px-3">
 
                       <svg
@@ -427,6 +554,7 @@ const { data: allProducts, error } = await supabase
                         viewBox="0 0 24 24"
                         stroke="currentColor"
                         strokeWidth={2}
+                        aria-hidden="true"
                       >
                         <path
                           strokeLinecap="round"
@@ -440,6 +568,7 @@ const { data: allProducts, error } = await supabase
                         name="search"
                         defaultValue={cleanSearchQuery}
                         placeholder="Search products..."
+                        aria-label="Search products"
                         className="min-w-0 flex-1 bg-transparent px-2.5 py-3 text-sm outline-none"
                       />
 
@@ -451,6 +580,7 @@ const { data: allProducts, error } = await supabase
                       </button>
 
                     </div>
+
                   </form>
 
                   <a
@@ -469,7 +599,9 @@ const { data: allProducts, error } = await supabase
             </details>
 
           </div>
+
         </div>
+
       </header>
 
       {/* =====================================================
@@ -549,16 +681,21 @@ const { data: allProducts, error } = await supabase
                     className="flex h-full w-full items-center justify-center"
                     aria-label={`View ${heroProduct.name}`}
                   >
+
                     <img
                       src={heroProduct.image}
                       alt={heroProduct.name}
                       className="h-full w-full max-h-[360px] object-contain transition-transform duration-700 hover:scale-[1.03] sm:max-h-[460px]"
                     />
+
                   </a>
 
                 ) : (
 
-                  <div className="text-7xl sm:text-9xl">
+                  <div
+                    className="text-7xl sm:text-9xl"
+                    aria-hidden="true"
+                  >
                     🍳
                   </div>
 
@@ -582,12 +719,16 @@ const { data: allProducts, error } = await supabase
                     }
                     className="mt-1 block max-w-[190px] truncate text-sm font-semibold text-zinc-800 transition-colors hover:text-amber-700 sm:max-w-xs"
                   >
-                    {heroProduct?.name || "Cook • Serve • Enjoy"}
+                    {heroProduct?.name ||
+                      "Cook • Serve • Enjoy"}
                   </a>
 
                 </div>
 
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white">
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm text-white"
+                  aria-hidden="true"
+                >
                   →
                 </span>
 
@@ -611,6 +752,7 @@ const { data: allProducts, error } = await supabase
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">✓</p>
+
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Quality Products
               </p>
@@ -618,6 +760,7 @@ const { data: allProducts, error } = await supabase
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">₹</p>
+
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Fair Pricing
               </p>
@@ -625,6 +768,7 @@ const { data: allProducts, error } = await supabase
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">💬</p>
+
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Easy Support
               </p>
@@ -632,6 +776,7 @@ const { data: allProducts, error } = await supabase
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">📍</p>
+
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Local Store
               </p>
@@ -681,6 +826,7 @@ const { data: allProducts, error } = await supabase
                     item.name
                   )}#products`}
                   className="group relative overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl sm:rounded-3xl"
+                  aria-label={`Explore ${item.title}`}
                 >
 
                   <div className="relative h-36 overflow-hidden bg-white sm:h-52">
@@ -690,12 +836,16 @@ const { data: allProducts, error } = await supabase
                       <img
                         src={item.image}
                         alt={item.title}
+                        loading="lazy"
                         className="h-full w-full object-contain p-3 transition-transform duration-700 ease-out group-hover:scale-105 sm:p-5"
                       />
 
                     ) : (
 
-                      <div className="flex h-full items-center justify-center text-5xl sm:text-7xl">
+                      <div
+                        className="flex h-full items-center justify-center text-5xl sm:text-7xl"
+                        aria-hidden="true"
+                      >
                         {item.fallback}
                       </div>
 
@@ -892,6 +1042,7 @@ const { data: allProducts, error } = await supabase
                             Number(product.price) && (
 
                             <>
+
                               <span className="text-xs text-zinc-400 line-through sm:text-sm">
                                 ₹{product.old_price}
                               </span>
@@ -908,6 +1059,7 @@ const { data: allProducts, error } = await supabase
                                 % OFF
 
                               </span>
+
                             </>
 
                           )}
@@ -981,7 +1133,10 @@ Please share more details and availability.`
                         View More Products
                       </span>
 
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition-transform duration-300 group-hover:translate-x-1">
+                      <span
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition-transform duration-300 group-hover:translate-x-1"
+                        aria-hidden="true"
+                      >
                         →
                       </span>
 
@@ -999,7 +1154,10 @@ Please share more details and availability.`
 
             <div className="mt-10 rounded-3xl border border-dashed border-zinc-300 p-10 text-center">
 
-              <div className="text-5xl">
+              <div
+                className="text-5xl"
+                aria-hidden="true"
+              >
                 🔍
               </div>
 
@@ -1085,7 +1243,10 @@ Please share more details and availability.`
                 className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl"
               >
 
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5efe4] text-xl">
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5efe4] text-xl"
+                  aria-hidden="true"
+                >
                   {item.icon}
                 </div>
 
@@ -1228,7 +1389,10 @@ Please share more details and availability.`
 
                 <div className="flex gap-4">
 
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-lg text-white">
+                  <div
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-lg text-white"
+                    aria-hidden="true"
+                  >
                     📍
                   </div>
 
@@ -1281,7 +1445,10 @@ Please share more details and availability.`
 
               <div className="relative flex h-full min-h-[330px] flex-col items-center justify-center px-6 text-center sm:min-h-[420px]">
 
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-900 text-2xl text-white shadow-xl">
+                <div
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-900 text-2xl text-white shadow-xl"
+                  aria-hidden="true"
+                >
                   📍
                 </div>
 
