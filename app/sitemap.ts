@@ -12,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("SITEMAP PRODUCT ERROR:", error);
   }
 
-  const productUrls =
+  const productUrls: MetadataRoute.Sitemap =
     products
       ?.filter((product) => product.slug)
       .map((product) => ({
@@ -20,36 +20,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: product.created_at
           ? new Date(product.created_at)
           : new Date(),
-        changeFrequency: "weekly" as const,
+        changeFrequency: "weekly",
         priority: 0.8,
-      })) || [];
+      })) ?? [];
 
   return [
+    // Homepage
     {
-      url: baseUrl,
+      url: `${baseUrl}/`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
     },
 
-    {
-      url: `${baseUrl}/login`,
-      changeFrequency: "monthly",
-      priority: 0.3,
-    },
-
-    {
-      url: `${baseUrl}/register`,
-      changeFrequency: "monthly",
-      priority: 0.3,
-    },
-
-    {
-      url: `${baseUrl}/cart`,
-      changeFrequency: "weekly",
-      priority: 0.4,
-    },
-
+    // Product pages
     ...productUrls,
   ];
 }
