@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 import type { Metadata } from "next";
 
-
 import ProductGallery from "@/app/components/ProductGallery";
 import AddToCartButton from "@/app/components/AddToCartButton";
+
 export const revalidate = 3600;
 
 type ProductPageProps = {
@@ -12,6 +12,10 @@ type ProductPageProps = {
     id: string;
   }>;
 };
+
+/* =========================================================
+   STATIC PRODUCT PATHS
+========================================================= */
 
 export async function generateStaticParams() {
   const { data: products } = await supabase
@@ -24,6 +28,10 @@ export async function generateStaticParams() {
     })) || []
   );
 }
+
+/* =========================================================
+   SEO METADATA
+========================================================= */
 
 export async function generateMetadata({
   params,
@@ -39,7 +47,12 @@ export async function generateMetadata({
   if (!product) {
     return {
       title: "Product Not Found | Dayal Kitchen Ware",
-      description: "The requested product could not be found.",
+      description:
+        "The requested product could not be found.",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
@@ -64,7 +77,10 @@ export async function generateMetadata({
       "Dayal Kitchen Ware",
       "kitchenware",
       "kitchen products",
+      "kitchen essentials",
       "cookware",
+      "pressure cooker",
+      "kitchen utensils",
     ],
 
     alternates: {
@@ -77,6 +93,8 @@ export async function generateMetadata({
       url: productUrl,
       siteName: "Dayal Kitchen Ware",
       type: "website",
+      locale: "en_IN",
+
       images: product.image
         ? [
             {
@@ -91,23 +109,46 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: `${product.name} | Dayal Kitchen Ware`,
       description,
-      images: product.image ? [product.image] : [],
+      images: product.image
+        ? [product.image]
+        : [],
     },
 
     robots: {
       index: true,
       follow: true,
+
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
   };
 }
-function ProductSchema({ product }: { product: any }) {
-  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
 
-  const productUrl = `${baseUrl}/products/${product.slug}`;
+/* =========================================================
+   PRODUCT SCHEMA
+========================================================= */
+
+function ProductSchema({
+  product,
+}: {
+  product: any;
+}) {
+  const baseUrl =
+    "https://dayal-kitchen-ware.vercel.app";
+
+  const productUrl =
+    `${baseUrl}/products/${product.slug}`;
 
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
+
+    name: product.name,
 
     category: product.category,
 
@@ -115,18 +156,21 @@ function ProductSchema({ product }: { product: any }) {
       product.description ||
       `Buy ${product.name} from Dayal Kitchen Ware.`,
 
-    image: product.image ? [product.image] : [],
+    image: product.image
+      ? [product.image]
+      : [],
 
     url: productUrl,
 
-   ...(product.brand
-  ? {
-      brand: {
-        "@type": "Brand",
-        name: product.brand,
-      },
-    }
-  : {}),
+    ...(product.brand
+      ? {
+          brand: {
+            "@type": "Brand",
+            name: product.brand,
+          },
+        }
+      : {}),
+
     offers: {
       "@type": "Offer",
 
@@ -155,6 +199,64 @@ function ProductSchema({ product }: { product: any }) {
     />
   );
 }
+
+/* =========================================================
+   BREADCRUMB SCHEMA
+========================================================= */
+
+function BreadcrumbSchema({
+  product,
+}: {
+  product: any;
+}) {
+  const baseUrl =
+    "https://dayal-kitchen-ware.vercel.app";
+
+  const productUrl =
+    `${baseUrl}/products/${product.slug}`;
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: baseUrl,
+      },
+
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Products",
+        item: `${baseUrl}/#products`,
+      },
+
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: product.name,
+        item: productUrl,
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(schema),
+      }}
+    />
+  );
+}
+
+/* =========================================================
+   PRODUCT PAGE
+========================================================= */
+
 export default async function ProductPage({
   params,
 }: ProductPageProps) {
@@ -167,9 +269,17 @@ export default async function ProductPage({
     .single();
 
   if (error || !product) {
-    console.error("PRODUCT DETAIL ERROR:", error);
+    console.error(
+      "PRODUCT DETAIL ERROR:",
+      error
+    );
+
     notFound();
   }
+
+  /* =======================================================
+     WHATSAPP
+  ======================================================= */
 
   const whatsappMessage = `Hello Dayal Kitchen Ware 👋
 
@@ -181,22 +291,41 @@ Price: ₹${product.price}
 
 Please share more details and availability.`;
 
-  const whatsappLink = `https://wa.me/917011872380?text=${encodeURIComponent(
-    whatsappMessage
-  )}`;
+  const whatsappLink =
+    `https://wa.me/917011872380?text=${encodeURIComponent(
+      whatsappMessage
+    )}`;
+
+  /* =======================================================
+     PAGE
+  ======================================================= */
 
   return (
     <main className="min-h-screen bg-[#faf9f6] text-zinc-900">
 
-    <ProductSchema product={product} />
-      {/* ================================================= */}
-      {/* NAVBAR */}
-      {/* ================================================= */}
+      {/* =====================================================
+          STRUCTURED DATA
+      ===================================================== */}
+
+      <ProductSchema product={product} />
+
+      <BreadcrumbSchema product={product} />
+
+      {/* =====================================================
+          NAVBAR
+      ===================================================== */}
 
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 backdrop-blur">
+
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
 
-          <a href="/" className="block">
+          {/* LOGO */}
+
+          <a
+            href="/"
+            className="block"
+          >
+
             <h1 className="text-lg font-bold sm:text-xl">
               DAYAL KITCHEN WARE
             </h1>
@@ -204,7 +333,10 @@ Please share more details and availability.`;
             <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-500 sm:text-[10px]">
               Kitchen • Home • Lifestyle
             </p>
+
           </a>
+
+          {/* BACK BUTTON */}
 
           <a
             href="/#products"
@@ -214,19 +346,20 @@ Please share more details and availability.`;
           </a>
 
         </div>
+
       </header>
 
-      {/* ================================================= */}
-      {/* PRODUCT */}
-      {/* ================================================= */}
+      {/* =====================================================
+          PRODUCT SECTION
+      ===================================================== */}
 
       <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-24">
 
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
 
-          {/* ================================================= */}
-          {/* PRODUCT GALLERY */}
-          {/* ================================================= */}
+          {/* =================================================
+              PRODUCT GALLERY
+          ================================================= */}
 
           <ProductGallery
             name={product.name}
@@ -234,9 +367,9 @@ Please share more details and availability.`;
             images={product.images}
           />
 
-          {/* ================================================= */}
-          {/* PRODUCT DETAILS */}
-          {/* ================================================= */}
+          {/* =================================================
+              PRODUCT DETAILS
+          ================================================= */}
 
           <div className="flex flex-col justify-center">
 
@@ -254,7 +387,7 @@ Please share more details and availability.`;
               {product.category}
             </p>
 
-            {/* NAME */}
+            {/* PRODUCT NAME */}
 
             <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
               {product.name}
@@ -269,11 +402,14 @@ Please share more details and availability.`;
               </span>
 
               {product.old_price &&
-                Number(product.old_price) > Number(product.price) && (
-                  <span className="text-lg text-zinc-400 line-through">
-                    ₹{product.old_price}
-                  </span>
-                )}
+                Number(product.old_price) >
+                  Number(product.price) && (
+
+                <span className="text-lg text-zinc-400 line-through">
+                  ₹{product.old_price}
+                </span>
+
+              )}
 
             </div>
 
@@ -291,13 +427,13 @@ Please share more details and availability.`;
 
             </div>
 
-            {/* ================================================= */}
-            {/* ACTION BUTTONS */}
-            {/* ================================================= */}
+            {/* =================================================
+                ACTION BUTTONS
+            ================================================= */}
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
 
-              {/* ASK ON WHATSAPP */}
+              {/* WHATSAPP */}
 
               <a
                 href={whatsappLink}
