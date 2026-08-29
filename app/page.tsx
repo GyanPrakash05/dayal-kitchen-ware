@@ -680,7 +680,9 @@ export default async function Home({
                   >
                     WhatsApp Us
                   </a>
-
+<div className="mt-3">
+  <AuthButton />
+</div>
                 </nav>
 
               </div>
@@ -1525,9 +1527,7 @@ Please share more details and availability.`
               </div>
 
             </div>
-            <div className="mt-3">
-  <AuthButton />
-</div>
+            
 
             {/* MAP CARD */}
 
