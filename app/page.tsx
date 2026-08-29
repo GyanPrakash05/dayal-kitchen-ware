@@ -6,7 +6,6 @@ import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 
 const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
 const WHATSAPP_NUMBER = "917011872380";
-
 const STORE_NAME = "Dayal Kitchen Ware";
 
 const STORE_ADDRESS = {
@@ -77,11 +76,8 @@ export const metadata: Metadata = {
       "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware in New Delhi.",
 
     url: BASE_URL,
-
     siteName: STORE_NAME,
-
     type: "website",
-
     locale: "en_IN",
   },
 
@@ -112,7 +108,7 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 /* =========================================================
-   WEBSITE + ORGANIZATION + LOCAL BUSINESS SCHEMA
+   BUSINESS SCHEMA
 ========================================================= */
 
 function BusinessSchema() {
@@ -122,11 +118,8 @@ function BusinessSchema() {
     "@graph": [
       {
         "@type": "WebSite",
-
         "@id": `${BASE_URL}/#website`,
-
         url: BASE_URL,
-
         name: STORE_NAME,
 
         description:
@@ -141,11 +134,8 @@ function BusinessSchema() {
 
       {
         "@type": "Organization",
-
         "@id": `${BASE_URL}/#organization`,
-
         name: STORE_NAME,
-
         url: BASE_URL,
 
         description:
@@ -155,28 +145,20 @@ function BusinessSchema() {
 
         address: {
           "@type": "PostalAddress",
-
           streetAddress: STORE_ADDRESS.streetAddress,
-
           addressLocality: STORE_ADDRESS.addressLocality,
-
           addressRegion: STORE_ADDRESS.addressRegion,
-
           postalCode: STORE_ADDRESS.postalCode,
-
           addressCountry: STORE_ADDRESS.addressCountry,
         },
       },
 
       {
         "@type": "Store",
-
         "@id": `${BASE_URL}/#localbusiness`,
 
         name: STORE_NAME,
-
         url: BASE_URL,
-
         telephone: "+91-7011872380",
 
         description:
@@ -188,23 +170,16 @@ function BusinessSchema() {
 
         address: {
           "@type": "PostalAddress",
-
           streetAddress: STORE_ADDRESS.streetAddress,
-
           addressLocality: STORE_ADDRESS.addressLocality,
-
           addressRegion: STORE_ADDRESS.addressRegion,
-
           postalCode: STORE_ADDRESS.postalCode,
-
           addressCountry: STORE_ADDRESS.addressCountry,
         },
 
         geo: {
           "@type": "GeoCoordinates",
-
           latitude: STORE_LATITUDE,
-
           longitude: STORE_LONGITUDE,
         },
 
@@ -308,7 +283,6 @@ export default async function Home({
   } = await searchParams;
 
   const cleanSearchQuery = searchQuery?.trim() || "";
-
   const cleanCategoryQuery = categoryQuery?.trim() || "";
 
   /* =======================================================
@@ -351,9 +325,7 @@ export default async function Home({
 
     filteredProducts = filteredProducts.filter((product) => {
       const name = product.name?.toLowerCase() || "";
-
       const category = product.category?.toLowerCase() || "";
-
       const description =
         product.description?.toLowerCase() || "";
 
@@ -434,7 +406,9 @@ export default async function Home({
 
           <div className="flex items-center justify-between gap-4">
 
-            {/* LOGO */}
+            {/* =================================================
+                LOGO
+            ================================================= */}
 
             <a
               href="/"
@@ -450,7 +424,9 @@ export default async function Home({
               </p>
             </a>
 
-            {/* DESKTOP NAV */}
+            {/* =================================================
+                DESKTOP NAVIGATION
+            ================================================= */}
 
             <div className="hidden items-center gap-5 md:flex">
 
@@ -496,7 +472,7 @@ export default async function Home({
 
               </nav>
 
-              {/* SEARCH */}
+              {/* DESKTOP SEARCH */}
 
               <form action="/" method="GET">
 
@@ -538,7 +514,7 @@ export default async function Home({
 
               </form>
 
-              {/* WHATSAPP */}
+              {/* DESKTOP WHATSAPP */}
 
               <a
                 href={whatsappLink}
@@ -553,296 +529,225 @@ export default async function Home({
 
             </div>
 
-            {/* MOBILE MENU */}
+            {/* =================================================
+                MOBILE HEADER ACTIONS
+            ================================================= */}
 
-            <details className="relative md:hidden">
+            <div className="flex items-center gap-2 md:hidden">
 
-              <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
+              {/* ACCOUNT / LOGIN */}
 
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden="true"
+              <AuthButton />
+
+              {/* MOBILE MENU */}
+
+              <details className="relative">
+
+                <summary
+                  className="
+                    flex h-10 w-10
+                    cursor-pointer
+                    list-none
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border border-zinc-200
+                    bg-white
+                    shadow-sm
+                    transition
+                    hover:border-zinc-400
+                  "
+                  aria-label="Open menu"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
 
-              </summary>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-zinc-800"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
 
-              <div className="absolute right-0 top-12 w-[calc(100vw-32px)] max-w-80 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xl">
+                </summary>
 
-                <nav
-                  aria-label="Mobile navigation"
-                  className="flex flex-col"
+                <div
+                  className="
+                    absolute
+                    right-0
+                    top-12
+                    z-[60]
+                    w-[calc(100vw-32px)]
+                    max-w-80
+                    rounded-2xl
+                    border
+                    border-zinc-200
+                    bg-white
+                    p-3
+                    shadow-2xl
+                  "
                 >
 
-                  <a
-                    href="#home"
-                    className="rounded-xl px-4 py-3 text-sm font-medium hover:bg-zinc-100"
+                  {/* MOBILE NAVIGATION */}
+
+                  <nav
+                    aria-label="Mobile navigation"
+                    className="flex flex-col"
                   >
-                    Home
-                  </a>
 
-                  <a
-                    href="#categories"
-                    className="rounded-xl px-4 py-3 text-sm font-medium hover:bg-zinc-100"
-                  >
-                    Categories
-                  </a>
+                    <a
+                      href="#home"
+                      className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
+                    >
+                      Home
+                    </a>
 
-                  <a
-                    href="#products"
-                    className="rounded-xl px-4 py-3 text-sm font-medium hover:bg-zinc-100"
-                  >
-                    Products
-                  </a>
+                    <a
+                      href="#categories"
+                      className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
+                    >
+                      Categories
+                    </a>
 
-                  <a
-                    href="#why-us"
-                    className="rounded-xl px-4 py-3 text-sm font-medium hover:bg-zinc-100"
-                  >
-                    Why Choose Us
-                  </a>
+                    <a
+                      href="#products"
+                      className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
+                    >
+                      Products
+                    </a>
 
-                  <a
-                    href="#location"
-                    className="rounded-xl px-4 py-3 text-sm font-medium hover:bg-zinc-100"
-                  >
-                    Visit Store
-                  </a>
+                    <a
+                      href="#why-us"
+                      className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
+                    >
+                      Why Choose Us
+                    </a>
 
-                  <a
-                    href="#about"
-                    className="rounded-xl px-4 py-3 text-sm font-medium hover:bg-zinc-100"
-                  >
-                    About
-                  </a>
+                    <a
+                      href="#location"
+                      className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
+                    >
+                      Visit Store
+                    </a>
 
-    {/* MOBILE HEADER ACTIONS */}
+                    <a
+                      href="#about"
+                      className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
+                    >
+                      About
+                    </a>
 
-<div className="flex items-center gap-2 md:hidden">
+                    {/* MOBILE SEARCH */}
 
-  {/* ACCOUNT / LOGIN ICON */}
+                    <form
+                      action="/"
+                      method="GET"
+                      className="mt-2"
+                    >
 
-  <AuthButton />
+                      <div
+                        className="
+                          flex
+                          items-center
+                          rounded-xl
+                          border
+                          border-zinc-200
+                          bg-zinc-50
+                          px-3
+                        "
+                      >
 
-  {/* MOBILE MENU */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 shrink-0 text-zinc-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0Z"
+                          />
+                        </svg>
 
-  <details className="relative">
+                        <input
+                          type="search"
+                          name="search"
+                          defaultValue={cleanSearchQuery}
+                          placeholder="Search products..."
+                          aria-label="Search products"
+                          className="
+                            min-w-0
+                            flex-1
+                            bg-transparent
+                            px-2.5
+                            py-3
+                            text-sm
+                            outline-none
+                          "
+                        />
 
-    <summary
-      className="
-        flex h-10 w-10
-        cursor-pointer
-        list-none
-        items-center
-        justify-center
-        rounded-xl
-        border border-zinc-200
-        bg-white
-        shadow-sm
-        transition
-        hover:border-zinc-400
-      "
-      aria-label="Open menu"
-    >
+                        <button
+                          type="submit"
+                          className="
+                            rounded-lg
+                            bg-zinc-900
+                            px-3
+                            py-2
+                            text-xs
+                            font-semibold
+                            text-white
+                            transition
+                            hover:bg-amber-700
+                          "
+                        >
+                          Go
+                        </button>
 
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5 text-zinc-800"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M4 6h16M4 12h16M4 18h16"
-        />
-      </svg>
+                      </div>
 
-    </summary>
+                    </form>
 
-    <div
-      className="
-        absolute
-        right-0
-        top-12
-        z-[60]
-        w-[calc(100vw-32px)]
-        max-w-80
-        rounded-2xl
-        border
-        border-zinc-200
-        bg-white
-        p-3
-        shadow-2xl
-      "
-    >
+                    {/* MOBILE WHATSAPP */}
 
-      {/* MOBILE NAVIGATION */}
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="
+                        mt-3
+                        rounded-full
+                        bg-green-600
+                        px-5
+                        py-3
+                        text-center
+                        text-sm
+                        font-semibold
+                        text-white
+                        transition
+                        hover:bg-green-700
+                      "
+                    >
+                      WhatsApp Us
+                    </a>
 
-      <nav
-        aria-label="Mobile navigation"
-        className="flex flex-col"
-      >
+                  </nav>
 
-        <a
-          href="#home"
-          className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
-        >
-          Home
-        </a>
+                </div>
 
-        <a
-          href="#categories"
-          className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
-        >
-          Categories
-        </a>
+              </details>
 
-        <a
-          href="#products"
-          className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
-        >
-          Products
-        </a>
-
-        <a
-          href="#why-us"
-          className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
-        >
-          Why Choose Us
-        </a>
-
-        <a
-          href="#location"
-          className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
-        >
-          Visit Store
-        </a>
-
-        <a
-          href="#about"
-          className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
-        >
-          About
-        </a>
-
-        {/* MOBILE SEARCH */}
-
-        <form
-          action="/"
-          method="GET"
-          className="mt-2"
-        >
-
-          <div
-            className="
-              flex
-              items-center
-              rounded-xl
-              border
-              border-zinc-200
-              bg-zinc-50
-              px-3
-            "
-          >
-
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 shrink-0 text-zinc-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0Z"
-              />
-            </svg>
-
-            <input
-              type="search"
-              name="search"
-              defaultValue={cleanSearchQuery}
-              placeholder="Search products..."
-              aria-label="Search products"
-              className="
-                min-w-0
-                flex-1
-                bg-transparent
-                px-2.5
-                py-3
-                text-sm
-                outline-none
-              "
-            />
-
-            <button
-              type="submit"
-              className="
-                rounded-lg
-                bg-zinc-900
-                px-3
-                py-2
-                text-xs
-                font-semibold
-                text-white
-                transition
-                hover:bg-amber-700
-              "
-            >
-              Go
-            </button>
-
-          </div>
-
-        </form>
-
-        {/* WHATSAPP */}
-
-        <a
-          href={whatsappLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="
-            mt-3
-            rounded-full
-            bg-green-600
-            px-5
-            py-3
-            text-center
-            text-sm
-            font-semibold
-            text-white
-            transition
-            hover:bg-green-700
-          "
-        >
-          WhatsApp Us
-        </a>
-
-      </nav>
-
-    </div>
-
-  </details>
-
-</div>
+            </div>
 
           </div>
 
@@ -1362,7 +1267,9 @@ Please share more details and availability.`
 
               </div>
 
-              {/* VIEW MORE */}
+              {/* =================================================
+                  VIEW MORE PRODUCTS
+              ================================================= */}
 
               {!isFiltering &&
                 !showAllProducts &&
@@ -1396,7 +1303,9 @@ Please share more details and availability.`
 
           ) : (
 
-            /* NO PRODUCTS */
+            /* =================================================
+               NO PRODUCTS
+            ================================================= */
 
             <div className="mt-10 rounded-3xl border border-dashed border-zinc-300 p-10 text-center">
 
@@ -1682,7 +1591,6 @@ Please share more details and availability.`
               </div>
 
             </div>
-            
 
             {/* MAP CARD */}
 
