@@ -73,7 +73,13 @@ export default function AuthButton() {
 
   if (loading) {
     return (
-      <div className="h-10 w-24 animate-pulse rounded-full bg-zinc-100" />
+      <>
+        {/* Desktop Loading */}
+        <div className="hidden h-10 w-24 animate-pulse rounded-full bg-zinc-100 md:block" />
+
+        {/* Mobile Loading */}
+        <div className="h-10 w-10 animate-pulse rounded-full bg-zinc-100 md:hidden" />
+      </>
     );
   }
 
@@ -84,13 +90,15 @@ export default function AuthButton() {
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        {/* ACCOUNT */}
+        {/* =====================================================
+            DESKTOP ACCOUNT
+        ===================================================== */}
 
         <Link
           href="/account"
           aria-label="Open your account"
           className="
-            inline-flex
+            hidden
             items-center
             justify-center
             gap-2
@@ -106,6 +114,7 @@ export default function AuthButton() {
             transition-all
             hover:border-zinc-900
             hover:shadow-sm
+            md:inline-flex
           "
         >
           <span
@@ -118,13 +127,15 @@ export default function AuthButton() {
           <span>Account</span>
         </Link>
 
-        {/* LOGOUT */}
+        {/* =====================================================
+            DESKTOP LOGOUT
+        ===================================================== */}
 
         <button
           type="button"
           onClick={handleLogout}
           className="
-            inline-flex
+            hidden
             items-center
             justify-center
             rounded-full
@@ -137,10 +148,45 @@ export default function AuthButton() {
             transition-all
             hover:bg-amber-700
             hover:shadow-lg
+            md:inline-flex
           "
         >
           Logout
         </button>
+
+        {/* =====================================================
+            MOBILE ACCOUNT ICON
+        ===================================================== */}
+
+        <Link
+          href="/account"
+          aria-label="Open your account"
+          title="Account"
+          className="
+            flex
+            h-10
+            w-10
+            items-center
+            justify-center
+            rounded-full
+            border
+            border-zinc-200
+            bg-white
+            text-lg
+            shadow-sm
+            transition-all
+            hover:border-zinc-900
+            hover:shadow-md
+            md:hidden
+          "
+        >
+          <span
+            className="leading-none"
+            aria-hidden="true"
+          >
+            👤
+          </span>
+        </Link>
       </div>
     );
   }
@@ -151,13 +197,15 @@ export default function AuthButton() {
 
   return (
     <div className="flex items-center gap-2">
-      {/* LOGIN */}
+      {/* =====================================================
+          DESKTOP LOGIN
+      ===================================================== */}
 
       <Link
         href="/login"
         aria-label="Login to your account"
         className="
-          inline-flex
+          hidden
           items-center
           justify-center
           gap-2
@@ -173,6 +221,7 @@ export default function AuthButton() {
           transition-all
           hover:border-zinc-900
           hover:shadow-sm
+          md:inline-flex
         "
       >
         <span
@@ -185,12 +234,14 @@ export default function AuthButton() {
         <span>Login</span>
       </Link>
 
-      {/* REGISTER */}
+      {/* =====================================================
+          DESKTOP REGISTER
+      ===================================================== */}
 
       <Link
         href="/register"
         className="
-          inline-flex
+          hidden
           items-center
           justify-center
           rounded-full
@@ -203,9 +254,44 @@ export default function AuthButton() {
           transition-all
           hover:bg-amber-700
           hover:shadow-lg
+          md:inline-flex
         "
       >
         Register
+      </Link>
+
+      {/* =====================================================
+          MOBILE LOGIN ICON
+      ===================================================== */}
+
+      <Link
+        href="/login"
+        aria-label="Login to your account"
+        title="Login"
+        className="
+          flex
+          h-10
+          w-10
+          items-center
+          justify-center
+          rounded-full
+          border
+          border-zinc-200
+          bg-white
+          text-lg
+          shadow-sm
+          transition-all
+          hover:border-zinc-900
+          hover:shadow-md
+          md:hidden
+        "
+      >
+        <span
+          className="leading-none"
+          aria-hidden="true"
+        >
+          👤
+        </span>
       </Link>
     </div>
   );

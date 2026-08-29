@@ -390,10 +390,6 @@ export default async function Home({
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 text-zinc-900 md:pb-0">
 
-      {/* =====================================================
-          SEO STRUCTURED DATA
-      ===================================================== */}
-
       <BusinessSchema />
 
       {/* =====================================================
@@ -406,9 +402,7 @@ export default async function Home({
 
           <div className="flex items-center justify-between gap-4">
 
-            {/* =================================================
-                LOGO
-            ================================================= */}
+            {/* LOGO */}
 
             <a
               href="/"
@@ -424,9 +418,7 @@ export default async function Home({
               </p>
             </a>
 
-            {/* =================================================
-                DESKTOP NAVIGATION
-            ================================================= */}
+            {/* DESKTOP NAVIGATION */}
 
             <div className="hidden items-center gap-5 md:flex">
 
@@ -434,7 +426,6 @@ export default async function Home({
                 aria-label="Main navigation"
                 className="flex items-center gap-5 text-sm font-medium lg:gap-7"
               >
-
                 <a
                   href="#home"
                   className="transition-colors hover:text-amber-700"
@@ -469,7 +460,6 @@ export default async function Home({
                 >
                   About
                 </a>
-
               </nav>
 
               {/* DESKTOP SEARCH */}
@@ -529,13 +519,9 @@ export default async function Home({
 
             </div>
 
-            {/* =================================================
-                MOBILE HEADER ACTIONS
-            ================================================= */}
+            {/* MOBILE HEADER ACTIONS */}
 
             <div className="flex items-center gap-2 md:hidden">
-
-              {/* ACCOUNT / LOGIN */}
 
               <AuthButton />
 
@@ -594,8 +580,6 @@ export default async function Home({
                     shadow-2xl
                   "
                 >
-
-                  {/* MOBILE NAVIGATION */}
 
                   <nav
                     aria-label="Mobile navigation"
