@@ -1525,6 +1525,9 @@ Please share more details and availability.`
               </div>
 
             </div>
+            <div className="mt-3">
+  <AuthButton />
+</div>
 
             {/* MAP CARD */}
 
