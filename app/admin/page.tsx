@@ -732,6 +732,14 @@ export default function AdminPage() {
         );
       }
 
+      /*
+       * IMPORTANT:
+       * Get the current Supabase access token
+       * and send it as Bearer authentication.
+       */
+      const token =
+        await getAccessToken();
+
       let response: Response;
 
       if (editingProduct) {
@@ -745,6 +753,12 @@ export default function AdminPage() {
             "/api/products",
             {
               method: "PATCH",
+
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
               body: formData,
             }
           );
@@ -754,6 +768,12 @@ export default function AdminPage() {
             "/api/products",
             {
               method: "POST",
+
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+
               body: formData,
             }
           );
@@ -761,6 +781,22 @@ export default function AdminPage() {
 
       const data =
         await response.json();
+
+      if (
+        response.status === 401
+      ) {
+        throw new Error(
+          "Admin session expired. Please login again."
+        );
+      }
+
+      if (
+        response.status === 403
+      ) {
+        throw new Error(
+          "You are not authorized as admin."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -864,15 +900,28 @@ export default function AdminPage() {
     setErrorMessage("");
 
     try {
+      /*
+       * IMPORTANT:
+       * Get the current Supabase access token
+       * and send it as Bearer authentication.
+       */
+      const token =
+        await getAccessToken();
+
       const response =
         await fetch(
           "/api/products",
           {
             method: "DELETE",
+
             headers: {
               "Content-Type":
                 "application/json",
+
+              Authorization:
+                `Bearer ${token}`,
             },
+
             body: JSON.stringify({
               id: product.id,
             }),
@@ -881,6 +930,22 @@ export default function AdminPage() {
 
       const data =
         await response.json();
+
+      if (
+        response.status === 401
+      ) {
+        throw new Error(
+          "Admin session expired. Please login again."
+        );
+      }
+
+      if (
+        response.status === 403
+      ) {
+        throw new Error(
+          "You are not authorized as admin."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -961,7 +1026,7 @@ export default function AdminPage() {
       (order) =>
         order.order_status ===
         "delivered"
-      ).length,
+    ).length,
 
     canceled: orders.filter(
       (order) =>
@@ -1042,9 +1107,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={fetchOrders}
-                disabled={
-                  loadingOrders
-                }
+                disabled={loadingOrders}
                 className="rounded-full border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold transition hover:border-zinc-900 hover:bg-zinc-900 hover:text-white disabled:opacity-50"
               >
                 {loadingOrders
@@ -1062,13 +1125,10 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={() =>
-                setOrderFilter(
-                  "all"
-                )
+                setOrderFilter("all")
               }
               className={`rounded-2xl border p-4 text-left transition ${
-                orderFilter ===
-                "all"
+                orderFilter === "all"
                   ? "border-zinc-900 bg-zinc-900 text-white"
                   : "border-zinc-200 bg-white hover:border-zinc-400"
               }`}
@@ -1085,9 +1145,7 @@ export default function AdminPage() {
             {ORDER_STATUSES.map(
               (status) => (
                 <button
-                  key={
-                    status.value
-                  }
+                  key={status.value}
                   type="button"
                   onClick={() =>
                     setOrderFilter(
@@ -1123,6 +1181,7 @@ export default function AdminPage() {
 
           {ordersError && (
             <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
                 <span>
@@ -1188,7 +1247,6 @@ export default function AdminPage() {
 
               {filteredOrders.map(
                 (order) => {
-
                   const items =
                     parseOrderItems(
                       order.items
@@ -1363,18 +1421,14 @@ export default function AdminPage() {
                             ) =>
                               updateOrderStatus(
                                 order,
-                                event
-                                  .target
+                                event.target
                                   .value as OrderStatus
                               )
                             }
                             className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:opacity-60 lg:w-64"
                           >
-
                             {ORDER_STATUSES.map(
-                              (
-                                status
-                              ) => (
+                              (status) => (
                                 <option
                                   key={
                                     status.value
@@ -1392,7 +1446,6 @@ export default function AdminPage() {
                                 </option>
                               )
                             )}
-
                           </select>
 
                         </div>
@@ -1472,7 +1525,6 @@ export default function AdminPage() {
                         }
                         className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold transition hover:bg-zinc-50 sm:px-6"
                       >
-
                         <span>
                           🛒{" "}
                           {items.length}{" "}
@@ -1488,7 +1540,6 @@ export default function AdminPage() {
                             ? "▲"
                             : "▼"}
                         </span>
-
                       </button>
 
                       {/* EXPANDED DETAILS */}
@@ -1575,6 +1626,7 @@ export default function AdminPage() {
                             <div className="mt-4 space-y-3 text-sm">
 
                               <div className="flex justify-between gap-4">
+
                                 <span className="text-zinc-500">
                                   Subtotal
                                 </span>
@@ -1584,9 +1636,11 @@ export default function AdminPage() {
                                     order.subtotal
                                   )}
                                 </span>
+
                               </div>
 
                               <div className="flex justify-between gap-4">
+
                                 <span className="text-zinc-500">
                                   Delivery Charge
                                 </span>
@@ -1596,11 +1650,13 @@ export default function AdminPage() {
                                     order.delivery_charge
                                   )}
                                 </span>
+
                               </div>
 
                               {order.order_status ===
                                 "canceled" && (
                                 <div className="flex justify-between gap-4 text-red-600">
+
                                   <span>
                                     Cancellation Charge
                                   </span>
@@ -1611,6 +1667,7 @@ export default function AdminPage() {
                                         0
                                     )}
                                   </span>
+
                                 </div>
                               )}
 
@@ -1691,9 +1748,7 @@ export default function AdminPage() {
 
           <form
             id="product-form"
-            onSubmit={
-              handleSubmit
-            }
+            onSubmit={handleSubmit}
             className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
           >
 
@@ -2063,7 +2118,6 @@ export default function AdminPage() {
 
               {products.map(
                 (product) => {
-
                   const images =
                     getProductImages(
                       product
