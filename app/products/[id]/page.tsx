@@ -500,14 +500,15 @@ Please share more details and availability.`;
 
               {/* ADD TO CART */}
 
-              <AddToCartButton
-                product={{
-                  name: productName,
-                  slug: productSlug,
-                  price: productPrice,
-                  image: productImage,
-                }}
-              />
+             <AddToCartButton
+  product={{
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    price: Number(product.price),
+    image: product.image,
+  }}
+/>
 
             </div>
 

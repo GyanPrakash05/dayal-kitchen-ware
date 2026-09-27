@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCart } from "../context/CartContext";
 
 type Product = {
+  id: string | number;
   name: string;
   slug: string;
   price: number;
@@ -20,7 +21,10 @@ export default function AddToCartButton({
 
   const handleAddToCart = () => {
     addToCart({
-      ...product,
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
       image: product.image ?? "",
     });
 

@@ -8,7 +8,7 @@ import {
 } from "react";
 
 type Product = {
-  id?: string | number;
+  id: string | number;
   name: string;
   slug: string;
   price: string | number;
@@ -36,12 +36,14 @@ const CART_STORAGE_KEY = "dayal-kitchen-cart";
 
 function getPriceValue(price: string | number): number {
   if (typeof price === "number") {
-    return price;
+    return Number.isFinite(price) ? price : 0;
   }
 
-  return Number(
-    price.replace(/[₹,\s]/g, "")
-  ) || 0;
+  return (
+    Number(
+      price.replace(/[₹,\s]/g, "")
+    ) || 0
+  );
 }
 
 export function CartProvider({
@@ -66,7 +68,16 @@ export function CartProvider({
           JSON.parse(savedCart);
 
         if (Array.isArray(parsedCart)) {
-          setCart(parsedCart);
+          // Only keep cart items that have a valid database ID.
+          const validCart = parsedCart.filter(
+            (item) =>
+              item &&
+              item.id &&
+              item.name &&
+              item.slug
+          );
+
+          setCart(validCart);
         }
       }
     } catch (error) {
@@ -116,6 +127,7 @@ export function CartProvider({
           item.slug === product.slug
             ? {
                 ...item,
+                id: product.id,
                 quantity:
                   item.quantity + 1,
               }
@@ -126,10 +138,13 @@ export function CartProvider({
       return [
         ...currentCart,
         {
-          ...product,
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
           price: getPriceValue(
             product.price
           ),
+          image: product.image,
           quantity: 1,
         },
       ];
