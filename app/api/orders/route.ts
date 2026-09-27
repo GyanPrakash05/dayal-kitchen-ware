@@ -327,6 +327,91 @@ async function sendWhatsAppUpdate({
 }
 
 /* =========================================================
+   EMAIL NOTIFICATION
+
+   Uses Resend.
+   Email failure should NOT fail the order.
+========================================================= */
+
+async function sendEmailNotification({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  const apiKey =
+    process.env.RESEND_API_KEY;
+
+  const from =
+    process.env.EMAIL_FROM;
+
+  if (!apiKey || !from) {
+    console.log(
+      "Email notification skipped: RESEND_API_KEY or EMAIL_FROM not configured."
+    );
+
+    return;
+  }
+
+  if (!to || !to.includes("@")) {
+    console.log(
+      "Email notification skipped: invalid recipient."
+    );
+
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "https://api.resend.com/emails",
+      {
+        method: "POST",
+
+        headers: {
+          Authorization:
+            `Bearer ${apiKey}`,
+
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          from,
+          to: [to],
+          subject,
+          html,
+        }),
+      }
+    );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      console.error(
+        "EMAIL API ERROR:",
+        result
+      );
+
+      return;
+    }
+
+    console.log(
+      "EMAIL NOTIFICATION SENT:",
+      result
+    );
+  } catch (error) {
+    console.error(
+      "EMAIL SEND ERROR:",
+      error
+    );
+  }
+}
+
+/* =========================================================
    POST ORDER
 
    CUSTOMER CREATES ORDER
@@ -728,6 +813,89 @@ const sanitizedItems = requestedItems.map(
       "ORDER CREATED:",
       order.id
     );
+
+    /* =====================================================
+   EMAIL - NEW ORDER TO ADMIN
+===================================================== */
+
+const adminEmailAddress =
+  process.env.ADMIN_EMAIL?.trim();
+
+if (adminEmailAddress) {
+  await sendEmailNotification({
+    to: adminEmailAddress,
+
+    subject:
+      `🛒 New Order #${String(order.id)
+        .slice(0, 8)
+        .toUpperCase()}`,
+
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>🛒 New Order Received</h2>
+
+        <p>
+          A new order has been placed on
+          <strong>Dayal Kitchen Ware</strong>.
+        </p>
+
+        <hr />
+
+        <p>
+          <strong>Order ID:</strong>
+          ${String(order.id)}
+        </p>
+
+        <p>
+          <strong>Customer:</strong>
+          ${customerName}
+        </p>
+
+        <p>
+          <strong>Email:</strong>
+          ${customerEmail}
+        </p>
+
+        <p>
+          <strong>Phone:</strong>
+          ${customerPhone}
+        </p>
+
+        <p>
+          <strong>Address:</strong>
+          ${deliveryAddress},
+          ${city} - ${pincode}
+        </p>
+
+        <p>
+          <strong>Subtotal:</strong>
+          ₹${Number(subtotal).toLocaleString("en-IN")}
+        </p>
+
+        <p>
+          <strong>Delivery:</strong>
+          ₹${Number(deliveryCharge).toLocaleString("en-IN")}
+        </p>
+
+        <h3>
+          Total:
+          ₹${Number(totalAmount).toLocaleString("en-IN")}
+        </h3>
+
+        <p>
+          <strong>Status:</strong>
+          Pending
+        </p>
+
+        <hr />
+
+        <p>
+          Please open the admin dashboard to manage this order.
+        </p>
+      </div>
+    `,
+  });
+}
 
     /* =====================================================
        WHATSAPP - ORDER CREATED
@@ -1223,7 +1391,96 @@ export async function PATCH(
         { status: 500 }
       );
     }
+/* =====================================================
+   EMAIL - CUSTOMER CANCELLATION
+===================================================== */
 
+if (status === "canceled") {
+  const customerEmail =
+    String(
+      existingOrder.customer_email || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const customerName =
+    String(
+      existingOrder.customer_name ||
+        "Customer"
+    );
+
+  const cancellationReason =
+    String(
+      updatedOrder.cancellation_reason ||
+        "No reason provided"
+    );
+
+  const cancellationCharge =
+    Number(
+      updatedOrder.cancellation_charge || 0
+    );
+
+  await sendEmailNotification({
+    to: customerEmail,
+
+    subject:
+      `Order #${String(existingOrder.id)
+        .slice(0, 8)
+        .toUpperCase()} - Order Canceled`,
+
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Order Canceled</h2>
+
+        <p>
+          Hello <strong>${customerName}</strong>,
+        </p>
+
+        <p>
+          Your order from
+          <strong>Dayal Kitchen Ware</strong>
+          has been canceled.
+        </p>
+
+        <hr />
+
+        <p>
+          <strong>Order ID:</strong>
+          ${String(existingOrder.id)}
+        </p>
+
+        <p>
+          <strong>Order Total:</strong>
+          ₹${Number(
+            existingOrder.total_amount || 0
+          ).toLocaleString("en-IN")}
+        </p>
+
+        <p>
+          <strong>Cancellation Reason:</strong>
+          ${cancellationReason}
+        </p>
+
+        <p>
+          <strong>Cancellation Charge:</strong>
+          ₹${cancellationCharge.toLocaleString("en-IN")}
+        </p>
+
+        <p>
+          <strong>Status:</strong>
+          Canceled
+        </p>
+
+        <hr />
+
+        <p>
+          If you have any questions, please contact
+          Dayal Kitchen Ware.
+        </p>
+      </div>
+    `,
+  });
+}
     /* =====================================================
        WHATSAPP STATUS UPDATE
     ===================================================== */
