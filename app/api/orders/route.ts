@@ -6,8 +6,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
-const adminEmail =
-  process.env.ADMIN_EMAIL?.trim().toLowerCase();
+const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
 
 const allowedStatuses = [
   "pending",
@@ -17,23 +16,71 @@ const allowedStatuses = [
   "canceled",
 ] as const;
 
-type OrderStatus =
-  (typeof allowedStatuses)[number];
+type OrderStatus = (typeof allowedStatuses)[number];
+
+type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+
+const allowedPaymentStatuses: PaymentStatus[] = [
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+];
 
 /* =========================================================
-   VALIDATE STATUS
+   HELPERS
 ========================================================= */
 
-function isValidStatus(
+function isValidStatus(status: string): status is OrderStatus {
+  return allowedStatuses.includes(status as OrderStatus);
+}
+
+function isValidPaymentStatus(
   status: string
-): status is OrderStatus {
-  return allowedStatuses.includes(
-    status as OrderStatus
+): status is PaymentStatus {
+  return allowedPaymentStatuses.includes(
+    status as PaymentStatus
   );
 }
 
+function shortOrderId(id: string) {
+  return String(id).slice(0, 8).toUpperCase();
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatStatus(status: string) {
+  const labels: Record<string, string> = {
+    pending: "Pending",
+    confirmed: "Confirmed",
+    out_for_delivery: "Out for Delivery",
+    delivered: "Delivered",
+    canceled: "Canceled",
+  };
+
+  return labels[status] || status;
+}
+
+function formatPaymentStatus(status: string) {
+  const labels: Record<string, string> = {
+    pending: "Pending",
+    paid: "Paid",
+    failed: "Failed",
+    refunded: "Refunded",
+  };
+
+  return labels[status] || status;
+}
+
 /* =========================================================
-   VALIDATE STATUS TRANSITION
+   STATUS TRANSITIONS
 
    pending
       ↓
@@ -43,13 +90,13 @@ function isValidStatus(
       ↓
    delivered
 
-   pending / confirmed / out_for_delivery
-      ↓
-   canceled
+   Cancellation:
+   pending → canceled
+   confirmed → canceled
+   out_for_delivery → canceled
 
    delivered / canceled
-      ↓
-   NO FURTHER CHANGE
+      → terminal
 ========================================================= */
 
 function isValidStatusTransition(
@@ -71,26 +118,14 @@ function isValidStatusTransition(
     string,
     OrderStatus[]
   > = {
-    pending: [
-      "confirmed",
-      "canceled",
-    ],
-
-    confirmed: [
-      "out_for_delivery",
-      "canceled",
-    ],
-
-    out_for_delivery: [
-      "delivered",
-      "canceled",
-    ],
+    pending: ["confirmed", "canceled"],
+    confirmed: ["out_for_delivery", "canceled"],
+    out_for_delivery: ["delivered", "canceled"],
   };
 
   return (
-    allowedTransitions[
-      currentStatus
-    ]?.includes(nextStatus) ?? false
+    allowedTransitions[currentStatus]?.includes(nextStatus) ??
+    false
   );
 }
 
@@ -98,11 +133,8 @@ function isValidStatusTransition(
    AUTHENTICATE USER
 ========================================================= */
 
-async function authenticateUser(
-  request: Request
-) {
-  const authHeader =
-    request.headers.get("authorization");
+async function authenticateUser(request: Request) {
+  const authHeader = request.headers.get("authorization");
 
   if (!authHeader?.startsWith("Bearer ")) {
     return {
@@ -111,8 +143,7 @@ async function authenticateUser(
     };
   }
 
-  const token =
-    authHeader.substring(7).trim();
+  const token = authHeader.substring(7).trim();
 
   if (!token) {
     return {
@@ -135,14 +166,10 @@ async function authenticateUser(
   const {
     data: { user },
     error,
-  } =
-    await supabaseAuth.auth.getUser(token);
+  } = await supabaseAuth.auth.getUser(token);
 
   if (error || !user) {
-    console.error(
-      "AUTH ERROR:",
-      error
-    );
+    console.error("AUTH ERROR:", error);
 
     return {
       user: null,
@@ -168,17 +195,40 @@ function isAdmin(user: {
   }
 
   return (
-    user.email?.trim().toLowerCase() ===
-    adminEmail
+    user.email?.trim().toLowerCase() === adminEmail
   );
 }
 
 /* =========================================================
-   WHATSAPP UPDATE
+   PHONE
+========================================================= */
 
-   Optional:
-   Works only when Meta WhatsApp credentials
-   and template are configured.
+function normalizeIndianPhone(phone: string) {
+  const cleanPhone = String(phone || "").replace(
+    /\D/g,
+    ""
+  );
+
+  if (!cleanPhone) {
+    return "";
+  }
+
+  if (
+    cleanPhone.length === 12 &&
+    cleanPhone.startsWith("91")
+  ) {
+    return cleanPhone;
+  }
+
+  if (cleanPhone.length === 10) {
+    return `91${cleanPhone}`;
+  }
+
+  return cleanPhone;
+}
+
+/* =========================================================
+   WHATSAPP ORDER STATUS
 ========================================================= */
 
 async function sendWhatsAppUpdate({
@@ -207,130 +257,203 @@ async function sendWhatsAppUpdate({
     !templateName
   ) {
     console.log(
-      "WhatsApp update skipped: credentials/template not configured."
+      "WhatsApp order update skipped: credentials/template not configured."
     );
 
     return;
   }
 
   const cleanPhone =
-    phone.replace(/\D/g, "");
+    normalizeIndianPhone(phone);
 
   if (!cleanPhone) {
     console.log(
-      "WhatsApp update skipped: invalid phone number."
+      "WhatsApp order update skipped: invalid phone."
     );
 
     return;
   }
 
-  const statusText: Record<
-    OrderStatus,
-    string
-  > = {
-    pending: "Pending",
-    confirmed: "Confirmed",
-    out_for_delivery:
-      "Out for Delivery",
-    delivered: "Delivered",
-    canceled: "Canceled",
-  };
-
   try {
-    const response =
-      await fetch(
-        `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
-        {
-          method: "POST",
-
-          headers: {
-            Authorization:
-              `Bearer ${accessToken}`,
-
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            messaging_product:
-              "whatsapp",
-
-            to: cleanPhone,
-
-            type: "template",
-
-            template: {
-              name: templateName,
-
-              language: {
-                code: "en",
-              },
-
-              components: [
-                {
-                  type: "body",
-
-                  parameters: [
-                    {
-                      type: "text",
-
-                      text:
-                        customerName ||
-                        "Customer",
-                    },
-
-                    {
-                      type: "text",
-
-                      text:
-                        orderId,
-                    },
-
-                    {
-                      type: "text",
-
-                      text:
-                        statusText[
-                          status
-                        ],
-                    },
-                  ],
-                },
-              ],
+    const response = await fetch(
+      `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: cleanPhone,
+          type: "template",
+          template: {
+            name: templateName,
+            language: {
+              code: "en",
             },
-          }),
-        }
-      );
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  {
+                    type: "text",
+                    text: customerName || "Customer",
+                  },
+                  {
+                    type: "text",
+                    text: shortOrderId(orderId),
+                  },
+                  {
+                    type: "text",
+                    text: formatStatus(status),
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      }
+    );
 
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok) {
       console.error(
-        "WHATSAPP API ERROR:",
+        "WHATSAPP ORDER API ERROR:",
         result
       );
-
       return;
     }
 
     console.log(
-      "WHATSAPP UPDATE SENT:",
+      "WHATSAPP ORDER UPDATE SENT:",
       result
     );
   } catch (error) {
     console.error(
-      "WHATSAPP SEND ERROR:",
+      "WHATSAPP ORDER SEND ERROR:",
       error
     );
   }
 }
 
 /* =========================================================
-   EMAIL NOTIFICATION
+   WHATSAPP PAYMENT UPDATE
+========================================================= */
 
-   Uses Resend.
-   Email failure should NOT fail the order.
+async function sendWhatsAppPaymentUpdate({
+  phone,
+  customerName,
+  orderId,
+  paymentStatus,
+}: {
+  phone: string;
+  customerName: string;
+  orderId: string;
+  paymentStatus: PaymentStatus;
+}) {
+  const accessToken =
+    process.env.WHATSAPP_ACCESS_TOKEN;
+
+  const phoneNumberId =
+    process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+  const templateName =
+    process.env.WHATSAPP_PAYMENT_TEMPLATE_NAME ||
+    process.env.WHATSAPP_ORDER_TEMPLATE_NAME;
+
+  if (
+    !accessToken ||
+    !phoneNumberId ||
+    !templateName
+  ) {
+    console.log(
+      "WhatsApp payment update skipped: credentials/template not configured."
+    );
+
+    return;
+  }
+
+  const cleanPhone =
+    normalizeIndianPhone(phone);
+
+  if (!cleanPhone) {
+    console.log(
+      "WhatsApp payment update skipped: invalid phone."
+    );
+
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: cleanPhone,
+          type: "template",
+          template: {
+            name: templateName,
+            language: {
+              code: "en",
+            },
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  {
+                    type: "text",
+                    text: customerName || "Customer",
+                  },
+                  {
+                    type: "text",
+                    text: shortOrderId(orderId),
+                  },
+                  {
+                    type: "text",
+                    text: formatPaymentStatus(
+                      paymentStatus
+                    ),
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error(
+        "WHATSAPP PAYMENT API ERROR:",
+        result
+      );
+      return;
+    }
+
+    console.log(
+      "WHATSAPP PAYMENT UPDATE SENT:",
+      result
+    );
+  } catch (error) {
+    console.error(
+      "WHATSAPP PAYMENT SEND ERROR:",
+      error
+    );
+  }
+}
+
+/* =========================================================
+   EMAIL
 ========================================================= */
 
 async function sendEmailNotification({
@@ -342,25 +465,20 @@ async function sendEmailNotification({
   subject: string;
   html: string;
 }) {
-  const apiKey =
-    process.env.RESEND_API_KEY;
-
-  const from =
-    process.env.EMAIL_FROM;
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
 
   if (!apiKey || !from) {
     console.log(
-      "Email notification skipped: RESEND_API_KEY or EMAIL_FROM not configured."
+      "Email skipped: RESEND_API_KEY or EMAIL_FROM missing."
     );
-
     return;
   }
 
   if (!to || !to.includes("@")) {
     console.log(
-      "Email notification skipped: invalid recipient."
+      "Email skipped: invalid recipient."
     );
-
     return;
   }
 
@@ -369,15 +487,10 @@ async function sendEmailNotification({
       "https://api.resend.com/emails",
       {
         method: "POST",
-
         headers: {
-          Authorization:
-            `Bearer ${apiKey}`,
-
-          "Content-Type":
-            "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
-
         body: JSON.stringify({
           from,
           to: [to],
@@ -387,20 +500,18 @@ async function sendEmailNotification({
       }
     );
 
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok) {
       console.error(
         "EMAIL API ERROR:",
         result
       );
-
       return;
     }
 
     console.log(
-      "EMAIL NOTIFICATION SENT:",
+      "EMAIL SENT:",
       result
     );
   } catch (error) {
@@ -412,19 +523,134 @@ async function sendEmailNotification({
 }
 
 /* =========================================================
-   POST ORDER
+   ORDER EMAIL
+========================================================= */
 
+function orderEmailHtml(
+  order: any,
+  title: string,
+  extraHtml = ""
+) {
+  const orderId = escapeHtml(order?.id);
+
+  const customerName = escapeHtml(
+    order?.customer_name || "Customer"
+  );
+
+  const customerEmail = escapeHtml(
+    order?.customer_email || ""
+  );
+
+  const customerPhone = escapeHtml(
+    order?.customer_phone || ""
+  );
+
+  const address = escapeHtml(
+    order?.delivery_address || ""
+  );
+
+  const city = escapeHtml(
+    order?.city || ""
+  );
+
+  const pincode = escapeHtml(
+    order?.pincode || ""
+  );
+
+  const totalAmount = Number(
+    order?.total_amount || 0
+  );
+
+  const paymentStatus = formatPaymentStatus(
+    String(order?.payment_status || "pending")
+  );
+
+  const orderStatus = formatStatus(
+    String(order?.order_status || "pending")
+  );
+
+  return `
+    <div style="
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 650px;
+      margin: 0 auto;
+      padding: 20px;
+    ">
+
+      <h2>${escapeHtml(title)}</h2>
+
+      <p>
+        Hello <strong>${customerName}</strong>,
+      </p>
+
+      <p>
+        This is an order update from
+        <strong>Dayal Kitchen Ware</strong>.
+      </p>
+
+      <hr />
+
+      <p>
+        <strong>Order ID:</strong>
+        ${orderId}
+      </p>
+
+      <p>
+        <strong>Customer:</strong>
+        ${customerName}
+      </p>
+
+      <p>
+        <strong>Email:</strong>
+        ${customerEmail}
+      </p>
+
+      <p>
+        <strong>Phone:</strong>
+        ${customerPhone}
+      </p>
+
+      <p>
+        <strong>Delivery Address:</strong>
+        ${address}, ${city} - ${pincode}
+      </p>
+
+      <p>
+        <strong>Order Total:</strong>
+        ₹${totalAmount.toLocaleString("en-IN")}
+      </p>
+
+      <p>
+        <strong>Order Status:</strong>
+        ${escapeHtml(orderStatus)}
+      </p>
+
+      <p>
+        <strong>Payment Status:</strong>
+        ${escapeHtml(paymentStatus)}
+      </p>
+
+      ${extraHtml}
+
+      <hr />
+
+      <p>
+        Thank you for choosing
+        <strong>Dayal Kitchen Ware</strong>.
+      </p>
+
+    </div>
+  `;
+}
+
+/* =========================================================
+   POST
    CUSTOMER CREATES ORDER
 ========================================================= */
 
-export async function POST(
-  request: Request
-) {
+export async function POST(request: Request) {
   try {
-    /* =====================================================
-       AUTHENTICATE CUSTOMER
-    ===================================================== */
-
     const auth =
       await authenticateUser(request);
 
@@ -433,73 +659,53 @@ export async function POST(
         {
           success: false,
           error:
-            auth.error ||
-            "Unauthorized.",
+            auth.error || "Unauthorized.",
         },
         { status: 401 }
       );
     }
 
-    const body =
-      await request.json();
+    const body = await request.json();
 
-    /* =====================================================
-       CUSTOMER DATA
-    ===================================================== */
+    const customerName = String(
+      body.customer_name || ""
+    ).trim();
 
-    const customerName =
-      String(
-        body.customer_name || ""
-      ).trim();
+    const customerEmail = String(
+      body.customer_email ||
+        auth.user.email ||
+        ""
+    )
+      .trim()
+      .toLowerCase();
 
-    const customerEmail =
-      String(
-        body.customer_email ||
-          auth.user.email ||
-          ""
-      )
-        .trim()
-        .toLowerCase();
+    const customerPhone = String(
+      body.customer_phone || ""
+    ).trim();
 
-    const customerPhone =
-      String(
-        body.customer_phone || ""
-      ).trim();
+    const deliveryAddress = String(
+      body.delivery_address || ""
+    ).trim();
 
-    const deliveryAddress =
-      String(
-        body.delivery_address || ""
-      ).trim();
+    const city = String(
+      body.city || ""
+    ).trim();
 
-    const city =
-      String(
-        body.city || ""
-      ).trim();
+    const pincode = String(
+      body.pincode || ""
+    ).trim();
 
-    const pincode =
-      String(
-        body.pincode || ""
-      ).trim();
+    const items = Array.isArray(body.items)
+      ? body.items
+      : [];
 
-    /* =====================================================
-       ITEMS
-    ===================================================== */
-
-    const items =
-      Array.isArray(body.items)
-        ? body.items
-        : [];
-
-    /* =====================================================
-       VALIDATION
-    ===================================================== */
+    /* ---------------- VALIDATION ---------------- */
 
     if (!customerName) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Customer name is required.",
+          error: "Customer name is required.",
         },
         { status: 400 }
       );
@@ -512,17 +718,14 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Valid customer email is required.",
+          error: "Valid customer email is required.",
         },
         { status: 400 }
       );
     }
 
     if (
-      !/^[6-9]\d{9}$/.test(
-        customerPhone
-      )
+      !/^[6-9]\d{9}$/.test(customerPhone)
     ) {
       return NextResponse.json(
         {
@@ -538,8 +741,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Delivery address is required.",
+          error: "Delivery address is required.",
         },
         { status: 400 }
       );
@@ -549,8 +751,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "City is required.",
+          error: "City is required.",
         },
         { status: 400 }
       );
@@ -578,117 +779,154 @@ export async function POST(
       );
     }
 
-    /* =====================================================
-       SANITIZE ITEMS
-    ===================================================== */
+    /* ---------------- SANITIZE ITEMS ---------------- */
 
-    const requestedItems = items.map((item: any) => ({
-  id: String(item?.id || "").trim(),
-  quantity: Math.max(
-    1,
-    Number(item?.quantity || 1)
-  ),
-}));
+    const requestedItems = items.map(
+      (item: any) => {
+        const quantity = Number(
+          item?.quantity || 1
+        );
 
-const productIds = [
-  ...new Set(
-    requestedItems
-  .map((item: { id: string; quantity: number }) => item.id)
-  .filter(Boolean)
-  ),
-];
-if (productIds.length === 0) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: "Invalid products in cart.",
-    },
-    { status: 400 }
-  );
-}
+        return {
+          id: String(
+            item?.id || ""
+          ).trim(),
 
-const {
-  data: products,
-  error: productsError,
-} = await supabaseAdmin
-  .from("products")
-  .select(
-    "id, name, slug, price, image"
-  )
-  .in("id", productIds);
+          quantity:
+            Number.isFinite(quantity) &&
+            quantity > 0
+              ? Math.floor(quantity)
+              : 1,
+        };
+      }
+    );
 
-if (productsError) {
-  console.error(
-    "PRODUCT FETCH ERROR:",
-    productsError
-  );
+    const productIds = [
+      ...new Set(
+        requestedItems
+          .map(
+            (item: {
+              id: string;
+              quantity: number;
+            }) => item.id
+          )
+          .filter(Boolean)
+      ),
+    ];
 
-  return NextResponse.json(
-    {
-      success: false,
-      error: "Unable to verify products.",
-    },
-    { status: 500 }
-  );
-}
-
-if (!products || products.length !== productIds.length) {
-  return NextResponse.json(
-    {
-      success: false,
-      error:
-        "One or more products are no longer available.",
-    },
-    { status: 400 }
-  );
-}
-
-const productMap = new Map(
-  products.map((product) => [
-    String(product.id),
-    product,
-  ])
-);
-
-const sanitizedItems = requestedItems.map(
-  (item: { id: string; quantity: number }) => {
-    const product = productMap.get(item.id);
-
-    if (!product) {
-      throw new Error(
-        `Product not found: ${item.id}`
+    if (productIds.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid products in cart.",
+        },
+        { status: 400 }
       );
     }
 
-    return {
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: Number(product.price),
-      quantity: item.quantity,
-      image: product.image,
-    };
-  }
-);
+    /* ---------------- FETCH PRODUCTS ---------------- */
 
-    /* =====================================================
-       CALCULATE SUBTOTAL
-    ===================================================== */
+    const {
+      data: products,
+      error: productsError,
+    } = await supabaseAdmin
+      .from("products")
+      .select(
+        "id, name, slug, price, image"
+      )
+      .in("id", productIds);
+
+    if (productsError) {
+      console.error(
+        "PRODUCT FETCH ERROR:",
+        productsError
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Unable to verify products.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (
+      !products ||
+      products.length !== productIds.length
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "One or more products are no longer available.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const productMap = new Map(
+      products.map((product) => [
+        String(product.id),
+        product,
+      ])
+    );
+
+    /* ---------------- BUILD ORDER ITEMS ---------------- */
+
+    const sanitizedItems = requestedItems.map(
+      (item: {
+        id: string;
+        quantity: number;
+      }) => {
+        const product =
+          productMap.get(item.id);
+
+        if (!product) {
+          throw new Error(
+            `Product not found: ${item.id}`
+          );
+        }
+
+        const price = Number(
+          product.price
+        );
+
+        if (
+          !Number.isFinite(price) ||
+          price <= 0
+        ) {
+          throw new Error(
+            `Invalid price for product: ${product.name}`
+          );
+        }
+
+        return {
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          price,
+          quantity: item.quantity,
+          image: product.image,
+        };
+      }
+    );
+
+    /* ---------------- SUBTOTAL ---------------- */
 
     const subtotal =
       sanitizedItems.reduce(
         (
           sum: number,
-          item: any
-        ) => {
-          return (
-            sum +
-            Number(item.price) *
-              Number(
-                item.quantity
-              )
-          );
-        },
+          item: {
+            price: number;
+            quantity: number;
+          }
+        ) =>
+          sum +
+          Number(item.price) *
+            Number(item.quantity),
         0
       );
 
@@ -706,9 +944,7 @@ const sanitizedItems = requestedItems.map(
       );
     }
 
-    /* =====================================================
-       DELIVERY CHARGE
-    ===================================================== */
+    /* ---------------- DELIVERY ---------------- */
 
     let deliveryCharge = 45;
 
@@ -718,68 +954,57 @@ const sanitizedItems = requestedItems.map(
       deliveryCharge = 30;
     }
 
-    /* =====================================================
-       FINAL TOTAL
-    ===================================================== */
-
     const totalAmount =
       subtotal + deliveryCharge;
 
-    /* =====================================================
-       CREATE ORDER
-
-       Every new order starts as:
-       pending
-    ===================================================== */
+    /* ---------------- CREATE ORDER ---------------- */
 
     const {
       data: order,
       error: orderError,
-    } =
-      await supabaseAdmin
-        .from("orders")
-        .insert({
-          user_id:
-            auth.user.id,
+    } = await supabaseAdmin
+      .from("orders")
+      .insert({
+        user_id: auth.user.id,
 
-          customer_name:
-            customerName,
+        customer_name:
+          customerName,
 
-          customer_email:
-            customerEmail,
+        customer_email:
+          customerEmail,
 
-          customer_phone:
-            customerPhone,
+        customer_phone:
+          customerPhone,
 
-          delivery_address:
-            deliveryAddress,
+        delivery_address:
+          deliveryAddress,
 
-          city,
+        city,
 
-          pincode,
+        pincode,
 
-          items:
-            sanitizedItems,
+        items:
+          sanitizedItems,
 
-          subtotal,
+        subtotal,
 
-          delivery_charge:
-            deliveryCharge,
+        delivery_charge:
+          deliveryCharge,
 
-          cancellation_charge:
-            0,
+        cancellation_charge:
+          0,
 
-          total_amount:
-            totalAmount,
+        total_amount:
+          totalAmount,
 
-          payment_status:
-            "pending",
+        payment_status:
+          "pending",
 
-          order_status:
-            "pending",
-        })
-        .select()
-        .single();
+        order_status:
+          "pending",
+      })
+      .select()
+      .single();
 
     if (orderError) {
       console.error(
@@ -810,118 +1035,76 @@ const sanitizedItems = requestedItems.map(
     }
 
     console.log(
-      "ORDER CREATED:",
+      "DAYAL KITCHEN WARE ORDER CREATED:",
       order.id
     );
 
-    /* =====================================================
-   EMAIL - NEW ORDER TO ADMIN
-===================================================== */
+    /* ---------------- ADMIN EMAIL ---------------- */
 
-const adminEmailAddress =
-  process.env.ADMIN_EMAIL?.trim();
+    const adminEmailAddress =
+      process.env.ADMIN_EMAIL?.trim();
 
-if (adminEmailAddress) {
-  await sendEmailNotification({
-    to: adminEmailAddress,
+    if (adminEmailAddress) {
+      await sendEmailNotification({
+        to: adminEmailAddress,
 
-    subject:
-      `🛒 New Order #${String(order.id)
-        .slice(0, 8)
-        .toUpperCase()}`,
+        subject:
+          `🛒 New Order #${shortOrderId(
+            String(order.id)
+          )}`,
 
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2>🛒 New Order Received</h2>
+        html: orderEmailHtml(
+          order,
+          "New Order Received",
+          `
+            <p>
+              A new order has been placed on
+              <strong>Dayal Kitchen Ware</strong>.
+            </p>
+          `
+        ),
+      });
+    }
 
-        <p>
-          A new order has been placed on
-          <strong>Dayal Kitchen Ware</strong>.
-        </p>
+    /* ---------------- CUSTOMER EMAIL ---------------- */
 
-        <hr />
+    await sendEmailNotification({
+      to: customerEmail,
 
-        <p>
-          <strong>Order ID:</strong>
-          ${String(order.id)}
-        </p>
+      subject:
+        `Order #${shortOrderId(
+          String(order.id)
+        )} - Order Received`,
 
-        <p>
-          <strong>Customer:</strong>
-          ${customerName}
-        </p>
+      html: orderEmailHtml(
+        order,
+        "Order Received",
+        `
+          <p>
+            Your order has been successfully received.
+          </p>
 
-        <p>
-          <strong>Email:</strong>
-          ${customerEmail}
-        </p>
+          <p>
+            <strong>Current Status:</strong>
+            Pending
+          </p>
+        `
+      ),
+    });
 
-        <p>
-          <strong>Phone:</strong>
-          ${customerPhone}
-        </p>
-
-        <p>
-          <strong>Address:</strong>
-          ${deliveryAddress},
-          ${city} - ${pincode}
-        </p>
-
-        <p>
-          <strong>Subtotal:</strong>
-          ₹${Number(subtotal).toLocaleString("en-IN")}
-        </p>
-
-        <p>
-          <strong>Delivery:</strong>
-          ₹${Number(deliveryCharge).toLocaleString("en-IN")}
-        </p>
-
-        <h3>
-          Total:
-          ₹${Number(totalAmount).toLocaleString("en-IN")}
-        </h3>
-
-        <p>
-          <strong>Status:</strong>
-          Pending
-        </p>
-
-        <hr />
-
-        <p>
-          Please open the admin dashboard to manage this order.
-        </p>
-      </div>
-    `,
-  });
-}
-
-    /* =====================================================
-       WHATSAPP - ORDER CREATED
-    ===================================================== */
+    /* ---------------- CUSTOMER WHATSAPP ---------------- */
 
     await sendWhatsAppUpdate({
       phone: customerPhone,
-
       customerName,
-
-      orderId:
-        String(order.id),
-
+      orderId: String(order.id),
       status: "pending",
     });
-
-    /* =====================================================
-       RESPONSE
-    ===================================================== */
 
     return NextResponse.json(
       {
         success: true,
-
         order,
-
         message:
           "Order placed successfully.",
       },
@@ -947,23 +1130,13 @@ if (adminEmailAddress) {
 }
 
 /* =========================================================
-   GET ORDERS
-
-   ADMIN:
-   ALL ORDERS
-
-   CUSTOMER:
-   ONLY THEIR ORDERS
+   GET
+   ADMIN → ALL ORDERS
+   CUSTOMER → OWN ORDERS
 ========================================================= */
 
-export async function GET(
-  request: Request
-) {
+export async function GET(request: Request) {
   try {
-    /* =====================================================
-       AUTHENTICATE USER
-    ===================================================== */
-
     const auth =
       await authenticateUser(request);
 
@@ -979,30 +1152,16 @@ export async function GET(
       );
     }
 
-    /* =====================================================
-       BASE QUERY
-    ===================================================== */
-
-    let query =
-      supabaseAdmin
-        .from("orders")
-        .select("*")
-        .order(
-          "created_at",
-          {
-            ascending: false,
-          }
-        );
-
-    /* =====================================================
-       ADMIN GETS ALL ORDERS
-
-       CUSTOMER GETS ONLY THEIR ORDERS
-    ===================================================== */
+    let query = supabaseAdmin
+      .from("orders")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (isAdmin(auth.user)) {
       console.log(
-        "ADMIN ORDERS REQUEST"
+        "DAYAL KITCHEN WARE ADMIN ORDERS REQUEST"
       );
     } else {
       query = query.eq(
@@ -1010,10 +1169,6 @@ export async function GET(
         auth.user.id
       );
     }
-
-    /* =====================================================
-       EXECUTE QUERY
-    ===================================================== */
 
     const {
       data,
@@ -1039,9 +1194,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-
-      orders:
-        data ?? [],
+      orders: data ?? [],
     });
   } catch (error) {
     console.error(
@@ -1063,35 +1216,18 @@ export async function GET(
 }
 
 /* =========================================================
-   PATCH ORDER
+   PATCH
+   ADMIN:
+   - Order status
+   - Payment status
+   - Cancellation
 
-   ADMIN ONLY
-
-   ALLOWED FLOW:
-
-   pending
-      ↓
-   confirmed
-      ↓
-   out_for_delivery
-      ↓
-   delivered
-
-   OR
-
-   pending → canceled
-   confirmed → canceled
-   out_for_delivery → canceled
+   CUSTOMER:
+   - Cancel own pending/confirmed order
 ========================================================= */
 
-export async function PATCH(
-  request: Request
-) {
+export async function PATCH(request: Request) {
   try {
-    /* =====================================================
-       AUTHENTICATE USER
-    ===================================================== */
-
     const auth =
       await authenticateUser(request);
 
@@ -1107,43 +1243,28 @@ export async function PATCH(
       );
     }
 
-    /* =====================================================
-       ADMIN CHECK
-    ===================================================== */
+    const body = await request.json();
 
-    if (!isAdmin(auth.user)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "You are not authorized as admin.",
-        },
-        { status: 403 }
-      );
-    }
+    const id = String(
+      body.id || ""
+    ).trim();
 
-    /* =====================================================
-       READ REQUEST BODY
-    ===================================================== */
-
-    const body =
-      await request.json();
-
-    const id =
-      String(
-        body.id || ""
-      ).trim();
-
-    const status =
+    const requestedStatusRaw =
       String(
         body.order_status || ""
       )
         .trim()
         .toLowerCase();
 
-    /* =====================================================
-       VALIDATE ORDER ID
-    ===================================================== */
+    const requestedPaymentStatusRaw =
+      body.payment_status === undefined ||
+      body.payment_status === null
+        ? null
+        : String(
+            body.payment_status
+          )
+            .trim()
+            .toLowerCase();
 
     if (!id) {
       return NextResponse.json(
@@ -1156,42 +1277,84 @@ export async function PATCH(
       );
     }
 
-    /* =====================================================
-       VALIDATE NEW STATUS
-    ===================================================== */
+    /* ---------------- PAYMENT VALIDATION ---------------- */
 
-    if (!isValidStatus(status)) {
+    let paymentStatus:
+      | PaymentStatus
+      | null = null;
+
+    if (
+      requestedPaymentStatusRaw !== null
+    ) {
+      if (
+        !isValidPaymentStatus(
+          requestedPaymentStatusRaw
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Invalid payment status.",
+          },
+          { status: 400 }
+        );
+      }
+
+      paymentStatus =
+        requestedPaymentStatusRaw;
+    }
+
+    /* ---------------- ORDER STATUS ---------------- */
+
+    let requestedStatus:
+      | OrderStatus
+      | null = null;
+
+    if (requestedStatusRaw) {
+      if (
+        !isValidStatus(
+          requestedStatusRaw
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Invalid order status.",
+          },
+          { status: 400 }
+        );
+      }
+
+      requestedStatus =
+        requestedStatusRaw;
+    }
+
+    if (
+      !requestedStatus &&
+      paymentStatus === null
+    ) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Invalid order status.",
+            "Order status or payment status is required.",
         },
         { status: 400 }
       );
     }
 
-    /* =====================================================
-       GET CURRENT ORDER
-
-       IMPORTANT:
-       existingOrder MUST be fetched before
-       checking the status transition.
-    ===================================================== */
+    /* ---------------- FETCH ORDER ---------------- */
 
     const {
       data: existingOrder,
       error: fetchError,
-    } =
-      await supabaseAdmin
-        .from("orders")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-    /* =====================================================
-       ORDER NOT FOUND
-    ===================================================== */
+    } = await supabaseAdmin
+      .from("orders")
+      .select("*")
+      .eq("id", id)
+      .single();
 
     if (
       fetchError ||
@@ -1205,85 +1368,86 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Order not found.",
+          error: "Order not found.",
         },
         { status: 404 }
       );
     }
 
-    /* =====================================================
-       STATUS TRANSITION VALIDATION
-
-       Example:
-
-       pending → confirmed       ✅
-       confirmed → out_for_delivery ✅
-       out_for_delivery → delivered ✅
-
-       pending → delivered       ❌
-       delivered → confirmed     ❌
-       canceled → pending        ❌
-       confirmed → pending       ❌
-    ===================================================== */
-
-    if (
-      !isValidStatusTransition(
-        existingOrder.order_status,
-        status
-      )
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-
-          error:
-            `Cannot change order status from "${existingOrder.order_status}" to "${status}".`,
-        },
-        { status: 400 }
-      );
-    }
+    const admin =
+      isAdmin(auth.user);
 
     /* =====================================================
-       UPDATE DATA
+       CUSTOMER
     ===================================================== */
 
-    const updateData: Record<
-      string,
-      unknown
-    > = {
-      order_status:
-        status,
-
-      updated_at:
-        new Date().toISOString(),
-    };
-
-    /* =====================================================
-       CANCELED ORDER
-
-       Cancellation reason required.
-       Cancellation charge must be valid.
-    ===================================================== */
-
-    if (
-      status === "canceled"
-    ) {
-      const reason =
-        String(
-          body.cancellation_reason ||
-            ""
-        ).trim();
-
-      const chargeValue =
-        Number(
-          body.cancellation_charge ??
-            0
+    if (!admin) {
+      if (
+        !requestedStatus &&
+        paymentStatus !== null
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Customers cannot update payment status.",
+          },
+          { status: 403 }
         );
+      }
 
-      /* ===================================================
-         VALIDATE CANCELLATION REASON
-      =================================================== */
+      if (
+        requestedStatus !==
+        "canceled"
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Customers can only cancel their own order.",
+          },
+          { status: 403 }
+        );
+      }
+
+      if (
+        existingOrder.user_id !==
+        auth.user.id
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "You can only cancel your own order.",
+          },
+          { status: 403 }
+        );
+      }
+
+      if (
+        ![
+          "pending",
+          "confirmed",
+        ].includes(
+          String(
+            existingOrder.order_status
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "This order can no longer be canceled by the customer.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const reason = String(
+        body.cancellation_reason ||
+          "Customer requested cancellation."
+      ).trim();
 
       if (!reason) {
         return NextResponse.json(
@@ -1296,15 +1460,321 @@ export async function PATCH(
         );
       }
 
-      /* ===================================================
-         VALIDATE CANCELLATION CHARGE
-      =================================================== */
+      const updateData: Record<
+        string,
+        unknown
+      > = {
+        order_status: "canceled",
+        cancellation_reason: reason,
+        cancellation_charge: 0,
+        updated_at:
+          new Date().toISOString(),
+      };
+
+      const {
+        data: updatedOrder,
+        error: updateError,
+      } =
+        await supabaseAdmin
+          .from("orders")
+          .update(updateData)
+          .eq("id", id)
+          .select()
+          .single();
+
+      if (
+        updateError ||
+        !updatedOrder
+      ) {
+        console.error(
+          "CUSTOMER CANCELLATION ERROR:",
+          updateError
+        );
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              updateError?.message ||
+              "Failed to cancel order.",
+          },
+          { status: 500 }
+        );
+      }
+
+      /* ADMIN EMAIL */
+
+      if (adminEmail) {
+        await sendEmailNotification({
+          to: adminEmail,
+
+          subject:
+            `Order #${shortOrderId(
+              String(id)
+            )} - Customer Canceled`,
+
+          html: orderEmailHtml(
+            updatedOrder,
+            "Customer Canceled an Order",
+            `
+              <p>
+                <strong>Cancellation Reason:</strong>
+                ${escapeHtml(reason)}
+              </p>
+
+              <p>
+                <strong>Cancellation Charge:</strong>
+                ₹0
+              </p>
+            `
+          ),
+        });
+      }
+
+      /* CUSTOMER EMAIL */
+
+      await sendEmailNotification({
+        to: String(
+          existingOrder.customer_email ||
+            auth.user.email ||
+            ""
+        )
+          .trim()
+          .toLowerCase(),
+
+        subject:
+          `Order #${shortOrderId(
+            String(id)
+          )} - Order Canceled`,
+
+        html: orderEmailHtml(
+          updatedOrder,
+          "Order Canceled",
+          `
+            <p>
+              Your order has been canceled successfully.
+            </p>
+
+            <p>
+              <strong>Cancellation Reason:</strong>
+              ${escapeHtml(reason)}
+            </p>
+
+            <p>
+              <strong>Cancellation Charge:</strong>
+              ₹0
+            </p>
+          `
+        ),
+      });
+
+      /* CUSTOMER WHATSAPP */
+
+      await sendWhatsAppUpdate({
+        phone: String(
+          existingOrder.customer_phone ||
+            ""
+        ),
+        customerName: String(
+          existingOrder.customer_name ||
+            "Customer"
+        ),
+        orderId: String(existingOrder.id),
+        status: "canceled",
+      });
+
+      return NextResponse.json({
+        success: true,
+        order: updatedOrder,
+        message:
+          "Order canceled successfully.",
+      });
+    }
+
+    /* =====================================================
+       ADMIN PAYMENT-ONLY UPDATE
+    ===================================================== */
+
+    if (
+      !requestedStatus &&
+      paymentStatus !== null
+    ) {
+      const {
+        data: updatedOrder,
+        error: updateError,
+      } =
+        await supabaseAdmin
+          .from("orders")
+          .update({
+            payment_status:
+              paymentStatus,
+            updated_at:
+              new Date().toISOString(),
+          })
+          .eq("id", id)
+          .select()
+          .single();
+
+      if (
+        updateError ||
+        !updatedOrder
+      ) {
+        console.error(
+          "PAYMENT STATUS UPDATE ERROR:",
+          updateError
+        );
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              updateError?.message ||
+              "Failed to update payment status.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const customerEmail =
+        String(
+          existingOrder.customer_email ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const customerName =
+        String(
+          existingOrder.customer_name ||
+            "Customer"
+        );
+
+      if (customerEmail) {
+        await sendEmailNotification({
+          to: customerEmail,
+
+          subject:
+            `Order #${shortOrderId(
+              String(id)
+            )} - Payment Status Updated`,
+
+          html: orderEmailHtml(
+            updatedOrder,
+            "Payment Status Updated",
+            `
+              <p>
+                Your payment status has been updated.
+              </p>
+
+              <p>
+                <strong>Payment Status:</strong>
+                ${escapeHtml(
+                  formatPaymentStatus(
+                    paymentStatus
+                  )
+                )}
+              </p>
+            `
+          ),
+        });
+      }
+
+      await sendWhatsAppPaymentUpdate({
+        phone: String(
+          existingOrder.customer_phone ||
+            ""
+        ),
+        customerName,
+        orderId: String(existingOrder.id),
+        paymentStatus,
+      });
+
+      return NextResponse.json({
+        success: true,
+        order: updatedOrder,
+        message:
+          "Payment status updated successfully.",
+      });
+    }
+
+    /* =====================================================
+       ADMIN ORDER STATUS
+    ===================================================== */
+
+    if (!requestedStatus) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Order status is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !isValidStatusTransition(
+        existingOrder.order_status,
+        requestedStatus
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            `Cannot change order status from "${existingOrder.order_status}" to "${requestedStatus}".`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const updateData: Record<
+      string,
+      unknown
+    > = {
+      order_status:
+        requestedStatus,
+
+      updated_at:
+        new Date().toISOString(),
+    };
+
+    if (paymentStatus !== null) {
+      updateData.payment_status =
+        paymentStatus;
+    }
+
+    /* ---------------- CANCELLATION ---------------- */
+
+    if (
+      requestedStatus === "canceled"
+    ) {
+      const reason = String(
+        body.cancellation_reason ||
+          ""
+      ).trim();
+
+      if (!reason) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Cancellation reason is required.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const cancellationCharge =
+        Number(
+          body.cancellation_charge ?? 0
+        );
 
       if (
         !Number.isFinite(
-          chargeValue
+          cancellationCharge
         ) ||
-        chargeValue < 0
+        cancellationCharge < 0
       ) {
         return NextResponse.json(
           {
@@ -1316,16 +1786,13 @@ export async function PATCH(
         );
       }
 
-      /* ===================================================
-         CHARGE CANNOT EXCEED ORDER TOTAL
-      =================================================== */
+      const orderTotal = Number(
+        existingOrder.total_amount || 0
+      );
 
       if (
-        chargeValue >
-        Number(
-          existingOrder.total_amount ||
-            0
-        )
+        cancellationCharge >
+        orderTotal
       ) {
         return NextResponse.json(
           {
@@ -1341,18 +1808,8 @@ export async function PATCH(
         reason;
 
       updateData.cancellation_charge =
-        chargeValue;
-    }
-
-    /* =====================================================
-       NON-CANCELED ORDER
-
-       Clear old cancellation information.
-    ===================================================== */
-
-    if (
-      status !== "canceled"
-    ) {
+        cancellationCharge;
+    } else {
       updateData.cancellation_reason =
         null;
 
@@ -1360,9 +1817,7 @@ export async function PATCH(
         0;
     }
 
-    /* =====================================================
-       UPDATE DATABASE
-    ===================================================== */
+    /* ---------------- UPDATE DATABASE ---------------- */
 
     const {
       data: updatedOrder,
@@ -1375,7 +1830,10 @@ export async function PATCH(
         .select()
         .single();
 
-    if (updateError) {
+    if (
+      updateError ||
+      !updatedOrder
+    ) {
       console.error(
         "ORDER UPDATE ERROR:",
         updateError
@@ -1385,139 +1843,124 @@ export async function PATCH(
         {
           success: false,
           error:
-            updateError.message ||
+            updateError?.message ||
             "Failed to update order.",
         },
         { status: 500 }
       );
     }
-/* =====================================================
-   EMAIL - CUSTOMER CANCELLATION
-===================================================== */
 
-if (status === "canceled") {
-  const customerEmail =
-    String(
-      existingOrder.customer_email || ""
-    )
-      .trim()
-      .toLowerCase();
+    /* ---------------- CUSTOMER EMAIL ---------------- */
 
-  const customerName =
-    String(
-      existingOrder.customer_name ||
-        "Customer"
-    );
+    const customerEmail =
+      String(
+        existingOrder.customer_email ||
+          ""
+      )
+        .trim()
+        .toLowerCase();
 
-  const cancellationReason =
-    String(
-      updatedOrder.cancellation_reason ||
-        "No reason provided"
-    );
+    const customerName =
+      String(
+        existingOrder.customer_name ||
+          "Customer"
+      );
 
-  const cancellationCharge =
-    Number(
-      updatedOrder.cancellation_charge || 0
-    );
+    if (customerEmail) {
+      let extraHtml = "";
 
-  await sendEmailNotification({
-    to: customerEmail,
+      if (
+        requestedStatus === "canceled"
+      ) {
+        extraHtml = `
+          <p>
+            <strong>Cancellation Reason:</strong>
+            ${escapeHtml(
+              updatedOrder.cancellation_reason ||
+                "No reason provided"
+            )}
+          </p>
 
-    subject:
-      `Order #${String(existingOrder.id)
-        .slice(0, 8)
-        .toUpperCase()} - Order Canceled`,
+          <p>
+            <strong>Cancellation Charge:</strong>
+            ₹${Number(
+              updatedOrder.cancellation_charge || 0
+            ).toLocaleString("en-IN")}
+          </p>
+        `;
+      } else {
+        extraHtml = `
+          <p>
+            Your order status has been updated by
+            <strong>Dayal Kitchen Ware</strong>.
+          </p>
+        `;
+      }
 
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2>Order Canceled</h2>
+      await sendEmailNotification({
+        to: customerEmail,
 
-        <p>
-          Hello <strong>${customerName}</strong>,
-        </p>
+        subject:
+          `Order #${shortOrderId(
+            String(id)
+          )} - ${
+            requestedStatus === "canceled"
+              ? "Order Canceled"
+              : "Status Updated"
+          }`,
 
-        <p>
-          Your order from
-          <strong>Dayal Kitchen Ware</strong>
-          has been canceled.
-        </p>
+        html: orderEmailHtml(
+          updatedOrder,
 
-        <hr />
+          requestedStatus === "canceled"
+            ? "Order Canceled"
+            : "Order Status Updated",
 
-        <p>
-          <strong>Order ID:</strong>
-          ${String(existingOrder.id)}
-        </p>
+          extraHtml
+        ),
+      });
+    }
 
-        <p>
-          <strong>Order Total:</strong>
-          ₹${Number(
-            existingOrder.total_amount || 0
-          ).toLocaleString("en-IN")}
-        </p>
-
-        <p>
-          <strong>Cancellation Reason:</strong>
-          ${cancellationReason}
-        </p>
-
-        <p>
-          <strong>Cancellation Charge:</strong>
-          ₹${cancellationCharge.toLocaleString("en-IN")}
-        </p>
-
-        <p>
-          <strong>Status:</strong>
-          Canceled
-        </p>
-
-        <hr />
-
-        <p>
-          If you have any questions, please contact
-          Dayal Kitchen Ware.
-        </p>
-      </div>
-    `,
-  });
-}
-    /* =====================================================
-       WHATSAPP STATUS UPDATE
-    ===================================================== */
+    /* ---------------- WHATSAPP ORDER UPDATE ---------------- */
 
     await sendWhatsAppUpdate({
-      phone:
-        String(
+      phone: String(
+        existingOrder.customer_phone ||
+          ""
+      ),
+
+      customerName,
+
+      orderId:
+        String(existingOrder.id),
+
+      status:
+        requestedStatus,
+    });
+
+    /* ---------------- PAYMENT UPDATE TOO ---------------- */
+
+    if (paymentStatus !== null) {
+      await sendWhatsAppPaymentUpdate({
+        phone: String(
           existingOrder.customer_phone ||
             ""
         ),
 
-      customerName:
-        String(
-          existingOrder.customer_name ||
-            "Customer"
-        ),
+        customerName,
 
-      orderId:
-        String(
-          existingOrder.id
-        ),
+        orderId:
+          String(existingOrder.id),
 
-      status,
-    });
-
-    /* =====================================================
-       RESPONSE
-    ===================================================== */
+        paymentStatus,
+      });
+    }
 
     return NextResponse.json({
       success: true,
-
-      order:
-        updatedOrder,
-
+      order: updatedOrder,
       message:
-        "Order status updated successfully.",
+        "Order updated successfully.",
     });
   } catch (error) {
     console.error(

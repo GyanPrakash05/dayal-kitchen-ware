@@ -15,40 +15,48 @@ type OrderStatus =
   | "delivered"
   | "canceled";
 
+type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded";
+
 type OrderItem = {
-  id?: string | number | null;
-  name?: string;
-  slug?: string;
-  price?: number | string;
-  quantity?: number | string;
+  id: string;
+  name: string;
+  slug?: string | null;
+  price: number;
+  quantity: number;
   image?: string | null;
 };
 
 type Order = {
   id: string;
-  user_id?: string | null;
+  user_id: string;
 
-  customer_name?: string | null;
-  customer_email?: string | null;
-  customer_phone?: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
 
-  delivery_address?: string | null;
-  city?: string | null;
-  pincode?: string | null;
+  delivery_address: string;
+  city: string;
+  pincode: string;
 
-  items?: OrderItem[] | null;
+  items: OrderItem[];
 
-  subtotal?: number | string | null;
-  delivery_charge?: number | string | null;
-  cancellation_charge?: number | string | null;
+  subtotal: number;
+  delivery_charge: number;
+  cancellation_charge: number;
+
   cancellation_reason?: string | null;
-  total_amount?: number | string | null;
 
-  payment_status?: string | null;
-  order_status?: OrderStatus | string | null;
+  total_amount: number;
 
-  created_at?: string | null;
-  updated_at?: string | null;
+  payment_status: PaymentStatus;
+  order_status: OrderStatus;
+
+  created_at: string;
+  updated_at: string;
 };
 
 const STATUS_OPTIONS: {
@@ -77,16 +85,40 @@ const STATUS_OPTIONS: {
   },
 ];
 
-function formatPrice(value: unknown) {
-  const number = Number(value || 0);
+const PAYMENT_OPTIONS: {
+  value: PaymentStatus;
+  label: string;
+}[] = [
+  {
+    value: "pending",
+    label: "Pending",
+  },
+  {
+    value: "paid",
+    label: "Paid",
+  },
+  {
+    value: "failed",
+    label: "Failed",
+  },
+  {
+    value: "refunded",
+    label: "Refunded",
+  },
+];
 
-  return `₹${number.toLocaleString("en-IN")}`;
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function formatPrice(value: number | null | undefined) {
+  const amount = Number(value || 0);
+
+  return `₹${amount.toLocaleString("en-IN")}`;
 }
 
-function formatDate(value?: string | null) {
-  if (!value) {
-    return "—";
-  }
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
 
   const date = new Date(value);
 
@@ -95,50 +127,77 @@ function formatDate(value?: string | null) {
   }
 
   return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+    dateStyle: "medium",
+    timeStyle: "short",
   });
 }
 
-function getStatusLabel(status?: string | null) {
+function getStatusLabel(status: OrderStatus) {
   return (
     STATUS_OPTIONS.find(
       (item) => item.value === status
-    )?.label || "Unknown"
+    )?.label || status
   );
 }
 
-function getStatusClasses(status?: string | null) {
+function getPaymentLabel(
+  status: PaymentStatus
+) {
+  return (
+    PAYMENT_OPTIONS.find(
+      (item) => item.value === status
+    )?.label || status
+  );
+}
+
+function getStatusClasses(
+  status: OrderStatus
+) {
   switch (status) {
     case "pending":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
 
     case "confirmed":
-      return "border-blue-200 bg-blue-50 text-blue-700";
+      return "bg-blue-100 text-blue-800 border-blue-200";
 
     case "out_for_delivery":
-      return "border-purple-200 bg-purple-50 text-purple-700";
+      return "bg-purple-100 text-purple-800 border-purple-200";
 
     case "delivered":
-      return "border-green-200 bg-green-50 text-green-700";
+      return "bg-green-100 text-green-800 border-green-200";
 
     case "canceled":
-      return "border-red-200 bg-red-50 text-red-700";
+      return "bg-red-100 text-red-800 border-red-200";
 
     default:
-      return "border-zinc-200 bg-zinc-50 text-zinc-600";
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 }
 
-function cleanPhone(phone?: string | null) {
-  if (!phone) {
-    return "";
-  }
+function getPaymentClasses(
+  status: PaymentStatus
+) {
+  switch (status) {
+    case "paid":
+      return "bg-green-100 text-green-800 border-green-200";
 
-  const digits = phone.replace(/\D/g, "");
+    case "failed":
+      return "bg-red-100 text-red-800 border-red-200";
+
+    case "refunded":
+      return "bg-purple-100 text-purple-800 border-purple-200";
+
+    case "pending":
+    default:
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  }
+}
+
+function cleanPhone(phone: string) {
+  const digits = String(phone || "").replace(
+    /\D/g,
+    ""
+  );
 
   if (digits.length === 10) {
     return `91${digits}`;
@@ -158,44 +217,29 @@ function createWhatsAppMessage(
   order: Order,
   status?: OrderStatus
 ) {
+  const orderId = String(order.id)
+    .slice(0, 8)
+    .toUpperCase();
+
   const currentStatus =
-    status || order.order_status || "pending";
-
-  const statusText =
-    getStatusLabel(currentStatus);
-
-  const orderId = order.id
-    ? order.id.slice(0, 8).toUpperCase()
-    : "ORDER";
+    status || order.order_status;
 
   let message =
     `Hello ${order.customer_name || "Customer"},\n\n` +
-    `Your RetailMind order #${orderId} has been updated.\n\n` +
-    `Order Status: ${statusText}\n` +
+    `Your Dayal Kitchen Ware order #${orderId} has been updated.\n\n` +
+    `Order Status: ${getStatusLabel(currentStatus)}\n` +
+    `Payment Status: ${getPaymentLabel(
+      order.payment_status || "pending"
+    )}\n` +
     `Order Total: ${formatPrice(
       order.total_amount
     )}\n\n`;
-
-  if (currentStatus === "confirmed") {
-    message +=
-      "Your order has been confirmed and is being prepared.\n\n";
-  }
-
-  if (currentStatus === "out_for_delivery") {
-    message +=
-      "Your order is out for delivery and will reach you soon.\n\n";
-  }
-
-  if (currentStatus === "delivered") {
-    message +=
-      "Your order has been delivered successfully. Thank you for shopping with us!\n\n";
-  }
 
   if (currentStatus === "canceled") {
     message +=
       `Cancellation Reason: ${
         order.cancellation_reason ||
-        "Not specified"
+        "Not provided"
       }\n` +
       `Cancellation Charge: ${formatPrice(
         order.cancellation_charge
@@ -203,12 +247,12 @@ function createWhatsAppMessage(
   }
 
   message +=
-    `Delivery Address:\n` +
-    `${order.delivery_address || ""}\n` +
-    `${order.city || ""} - ${
+    `Delivery Address: ${
+      order.delivery_address || ""
+    }, ${order.city || ""} - ${
       order.pincode || ""
     }\n\n` +
-    "Thank you for choosing RetailMind.";
+    `Thank you for choosing Dayal Kitchen Ware.`;
 
   return message;
 }
@@ -222,9 +266,6 @@ function openWhatsApp(
   );
 
   if (!phone) {
-    alert(
-      "Customer mobile number is not available."
-    );
     return;
   }
 
@@ -232,9 +273,8 @@ function openWhatsApp(
     createWhatsAppMessage(order, status);
 
   const url =
-    `https://wa.me/${phone}?text=${encodeURIComponent(
-      message
-    )}`;
+    `https://wa.me/${phone}?text=` +
+    encodeURIComponent(message);
 
   window.open(
     url,
@@ -242,6 +282,10 @@ function openWhatsApp(
     "noopener,noreferrer"
   );
 }
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>(
@@ -257,17 +301,24 @@ export default function AdminOrdersPage() {
   const [error, setError] =
     useState("");
 
+  const [toast, setToast] =
+    useState("");
+
   const [search, setSearch] =
     useState("");
 
-  const [filterStatus, setFilterStatus] =
+  const [statusFilter, setStatusFilter] =
     useState<"all" | OrderStatus>("all");
+
+  const [
+    paymentFilter,
+    setPaymentFilter,
+  ] = useState<
+    "all" | PaymentStatus
+  >("all");
 
   const [selectedOrder, setSelectedOrder] =
     useState<Order | null>(null);
-
-  const [updatingId, setUpdatingId] =
-    useState<string | null>(null);
 
   const [cancelOrder, setCancelOrder] =
     useState<Order | null>(null);
@@ -276,15 +327,34 @@ export default function AdminOrdersPage() {
     useState("");
 
   const [cancelCharge, setCancelCharge] =
-    useState("0");
-
-  const [toast, setToast] =
     useState("");
 
+  const [updatingOrderId, setUpdatingOrderId] =
+    useState<string | null>(null);
+
+  /* =======================================================
+     TOAST
+  ======================================================= */
+
+  const showToast = useCallback(
+    (message: string) => {
+      setToast(message);
+
+      window.setTimeout(() => {
+        setToast("");
+      }, 3500);
+    },
+    []
+  );
+
+  /* =======================================================
+     GET ORDERS
+  ======================================================= */
+
   const getOrders = useCallback(
-    async (showRefresh = false) => {
+    async (showRefreshing = false) => {
       try {
-        if (showRefresh) {
+        if (showRefreshing) {
           setRefreshing(true);
         } else {
           setLoading(true);
@@ -293,59 +363,38 @@ export default function AdminOrdersPage() {
         setError("");
 
         const {
-          data: sessionData,
-          error: sessionError,
-        } =
-          await supabase.auth.getSession();
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        if (
-          sessionError ||
-          !sessionData.session
-        ) {
+        if (!session?.access_token) {
           setError(
-            "Your session has expired. Please login again."
+            "Admin session expired. Please login again."
           );
           return;
         }
-
-        const token =
-          sessionData.session.access_token;
 
         const response = await fetch(
           "/api/orders",
           {
             method: "GET",
             headers: {
-              Authorization:
-                `Bearer ${token}`,
+              Authorization: `Bearer ${session.access_token}`,
             },
             cache: "no-store",
           }
         );
 
-        let result: any = null;
+        const result =
+          await response.json();
 
-        try {
-          result =
-            await response.json();
-        } catch {
-          result = null;
-        }
-
-        if (!response.ok) {
-          setError(
-            result?.error ||
-              "Failed to load orders."
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+          throw new Error(
+            result.error ||
+              "Failed to fetch orders."
           );
-          return;
-        }
-
-        if (!result?.success) {
-          setError(
-            result?.error ||
-              "Failed to load orders."
-          );
-          return;
         }
 
         setOrders(
@@ -353,16 +402,13 @@ export default function AdminOrdersPage() {
             ? result.orders
             : []
         );
-      } catch (error) {
-        console.error(
-          "ADMIN ORDERS ERROR:",
-          error
-        );
+      } catch (err) {
+        console.error(err);
 
         setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load orders."
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch orders."
         );
       } finally {
         setLoading(false);
@@ -376,6 +422,10 @@ export default function AdminOrdersPage() {
     getOrders();
   }, [getOrders]);
 
+  /* =======================================================
+     UPDATE ORDER STATUS
+  ======================================================= */
+
   const updateOrderStatus = async (
     order: Order,
     status: OrderStatus,
@@ -383,36 +433,30 @@ export default function AdminOrdersPage() {
     charge?: number
   ) => {
     try {
-      setUpdatingId(order.id);
+      setUpdatingOrderId(order.id);
       setError("");
 
       const {
-        data: sessionData,
-        error: sessionError,
-      } =
-        await supabase.auth.getSession();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (
-        sessionError ||
-        !sessionData.session
-      ) {
-        setError(
-          "Your session has expired. Please login again."
+      if (!session?.access_token) {
+        throw new Error(
+          "Admin session expired. Please login again."
         );
-        return;
       }
 
-      const token =
-        sessionData.session.access_token;
-
-      const body: Record<string, unknown> = {
+      const body: Record<
+        string,
+        unknown
+      > = {
         id: order.id,
         order_status: status,
       };
 
       if (status === "canceled") {
         body.cancellation_reason =
-          reason?.trim() || "";
+          reason || "";
 
         body.cancellation_charge =
           Number(charge || 0);
@@ -422,164 +466,261 @@ export default function AdminOrdersPage() {
         "/api/orders",
         {
           method: "PATCH",
-
           headers: {
             "Content-Type":
               "application/json",
-
-            Authorization:
-              `Bearer ${token}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
-
           body: JSON.stringify(body),
         }
       );
 
-      let result: any = null;
+      const result =
+        await response.json();
 
-      try {
-        result =
-          await response.json();
-      } catch {
-        result = null;
-      }
-
-      if (!response.ok || !result?.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
-          result?.error ||
+          result.error ||
             "Failed to update order."
         );
       }
 
-      const updated =
+      const updatedOrder =
         result.order as Order;
 
       setOrders((current) =>
         current.map((item) =>
           item.id === order.id
-            ? updated
+            ? updatedOrder
             : item
         )
       );
 
-      if (
-        selectedOrder?.id === order.id
-      ) {
-        setSelectedOrder(updated);
-      }
-
-      setToast(
-        "Order status updated successfully."
+      setSelectedOrder((current) =>
+        current?.id === order.id
+          ? updatedOrder
+          : current
       );
-
-      setTimeout(() => {
-        setToast("");
-      }, 3000);
 
       if (status === "canceled") {
         setCancelOrder(null);
         setCancelReason("");
-        setCancelCharge("0");
+        setCancelCharge("");
       }
 
-      /*
-       * WhatsApp is intentionally opened
-       * after successful status update.
-       */
-      openWhatsApp(updated, status);
-    } catch (error) {
-      console.error(
-        "UPDATE ORDER ERROR:",
-        error
+      showToast(
+        status === "canceled"
+          ? "Order canceled successfully."
+          : `Order status changed to ${getStatusLabel(
+              status
+            )}.`
       );
 
+      openWhatsApp(
+        updatedOrder,
+        status
+      );
+    } catch (err) {
+      console.error(err);
+
       setError(
-        error instanceof Error
-          ? error.message
+        err instanceof Error
+          ? err.message
           : "Failed to update order."
       );
     } finally {
-      setUpdatingId(null);
+      setUpdatingOrderId(null);
     }
   };
+
+  /* =======================================================
+     PAYMENT STATUS
+  ======================================================= */
+
+  const updatePaymentStatus =
+    async (
+      order: Order,
+      paymentStatus: PaymentStatus
+    ) => {
+      try {
+        setUpdatingOrderId(order.id);
+        setError("");
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error(
+            "Admin session expired. Please login again."
+          );
+        }
+
+        const response = await fetch(
+          "/api/orders",
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              id: order.id,
+              payment_status:
+                paymentStatus,
+            }),
+          }
+        );
+
+        const result =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+          throw new Error(
+            result.error ||
+              "Failed to update payment status."
+          );
+        }
+
+        const updatedOrder =
+          result.order as Order;
+
+        setOrders((current) =>
+          current.map((item) =>
+            item.id === order.id
+              ? updatedOrder
+              : item
+          )
+        );
+
+        setSelectedOrder((current) =>
+          current?.id === order.id
+            ? updatedOrder
+            : current
+        );
+
+        showToast(
+          `Payment status changed to ${getPaymentLabel(
+            paymentStatus
+          )}.`
+        );
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to update payment status."
+        );
+      } finally {
+        setUpdatingOrderId(null);
+      }
+    };
+
+  /* =======================================================
+     FILTERED ORDERS
+  ======================================================= */
 
   const filteredOrders = useMemo(() => {
     const query =
       search.trim().toLowerCase();
 
     return orders.filter((order) => {
+      const matchesSearch =
+        !query ||
+        [
+          order.id,
+          order.customer_name,
+          order.customer_email,
+          order.customer_phone,
+          order.city,
+          order.pincode,
+          order.delivery_address,
+        ]
+          .filter(Boolean)
+          .some((value) =>
+            String(value)
+              .toLowerCase()
+              .includes(query)
+          );
+
       const matchesStatus =
-        filterStatus === "all" ||
+        statusFilter === "all" ||
         order.order_status ===
-          filterStatus;
+          statusFilter;
 
-      if (!matchesStatus) {
-        return false;
-      }
+      const matchesPayment =
+        paymentFilter === "all" ||
+        order.payment_status ===
+          paymentFilter;
 
-      if (!query) {
-        return true;
-      }
-
-      const searchable = [
-        order.id,
-        order.customer_name,
-        order.customer_email,
-        order.customer_phone,
-        order.city,
-        order.pincode,
-        order.delivery_address,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return searchable.includes(query);
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPayment
+      );
     });
   }, [
     orders,
     search,
-    filterStatus,
+    statusFilter,
+    paymentFilter,
   ]);
 
+  /* =======================================================
+     STATS
+  ======================================================= */
+
   const stats = useMemo(() => {
-    return {
-      total: orders.length,
+    const total = orders.length;
 
-      pending: orders.filter(
-        (order) =>
-          order.order_status ===
-          "pending"
-      ).length,
+    const pending = orders.filter(
+      (order) =>
+        order.order_status === "pending"
+    ).length;
 
-      confirmed: orders.filter(
-        (order) =>
-          order.order_status ===
-          "confirmed"
-      ).length,
+    const confirmed = orders.filter(
+      (order) =>
+        order.order_status === "confirmed"
+    ).length;
 
-      delivery: orders.filter(
+    const outForDelivery =
+      orders.filter(
         (order) =>
           order.order_status ===
           "out_for_delivery"
-      ).length,
+      ).length;
 
-      delivered: orders.filter(
+    const delivered = orders.filter(
+      (order) =>
+        order.order_status === "delivered"
+    ).length;
+
+    const canceled = orders.filter(
+      (order) =>
+        order.order_status === "canceled"
+    ).length;
+
+    const paid = orders.filter(
+      (order) =>
+        order.payment_status === "paid"
+    ).length;
+
+    const paymentPending =
+      orders.filter(
         (order) =>
-          order.order_status ===
-          "delivered"
-      ).length,
+          order.payment_status ===
+          "pending"
+      ).length;
 
-      canceled: orders.filter(
-        (order) =>
-          order.order_status ===
-          "canceled"
-      ).length,
-    };
-  }, [orders]);
-
-  const totalRevenue = useMemo(() => {
-    return orders
+    const totalRevenue = orders
       .filter(
         (order) =>
           order.order_status !==
@@ -588,32 +729,69 @@ export default function AdminOrdersPage() {
       .reduce(
         (sum, order) =>
           sum +
-          Number(
-            order.total_amount || 0
-          ),
+          Number(order.total_amount || 0),
         0
       );
+
+    return {
+      total,
+      pending,
+      confirmed,
+      outForDelivery,
+      delivered,
+      canceled,
+      paid,
+      paymentPending,
+      totalRevenue,
+    };
   }, [orders]);
 
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 p-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="animate-pulse space-y-6">
+            <div className="h-10 w-80 rounded bg-gray-200" />
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({
+                length: 4,
+              }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-28 rounded-2xl bg-gray-200"
+                />
+              ))}
+            </div>
+
+            <div className="h-64 rounded-2xl bg-gray-200" />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-[#faf9f6] px-4 py-6 text-zinc-900 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
-        {/* HEADER */}
-
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
-              RetailMind Admin
-            </p>
-
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#5c4033] sm:text-4xl">
-              Orders
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+              Dayal Kitchen Ware Admin
             </h1>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-gray-600">
               Manage customer orders,
-              delivery status and updates.
+              delivery status and payment
+              updates.
             </p>
           </div>
 
@@ -623,261 +801,287 @@ export default function AdminOrdersPage() {
               getOrders(true)
             }
             disabled={refreshing}
-            className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {refreshing
               ? "Refreshing..."
-              : "↻ Refresh Orders"}
+              : "Refresh Orders"}
           </button>
-        </div>
+        </header>
 
-        {/* TOAST */}
+        {/* =================================================
+            TOAST
+        ================================================= */}
 
         {toast && (
-          <div className="fixed right-4 top-4 z-[100] rounded-2xl border border-green-200 bg-white px-5 py-4 text-sm font-semibold text-green-700 shadow-xl">
-            ✓ {toast}
+          <div className="fixed right-4 top-4 z-[100] rounded-xl bg-black px-5 py-3 text-sm font-medium text-white shadow-xl">
+            {toast}
           </div>
         )}
 
-        {/* ERROR */}
+        {/* =================================================
+            ERROR
+        ================================================= */}
 
         {error && (
-          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-            {error}
+          <div className="flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <span>{error}</span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setError("")
+              }
+              className="font-bold"
+            >
+              ×
+            </button>
           </div>
         )}
 
-        {/* STATS */}
+        {/* =================================================
+            STATS
+        ================================================= */}
 
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label="Total"
+            title="Total Orders"
             value={stats.total}
-            active={
-              filterStatus === "all"
-            }
-            onClick={() =>
-              setFilterStatus("all")
-            }
           />
 
           <StatCard
-            label="Pending"
+            title="Pending"
             value={stats.pending}
-            active={
-              filterStatus === "pending"
-            }
-            onClick={() =>
-              setFilterStatus("pending")
-            }
           />
 
           <StatCard
-            label="Confirmed"
+            title="Confirmed"
             value={stats.confirmed}
-            active={
-              filterStatus === "confirmed"
-            }
-            onClick={() =>
-              setFilterStatus("confirmed")
+          />
+
+          <StatCard
+            title="Out for Delivery"
+            value={
+              stats.outForDelivery
             }
           />
 
           <StatCard
-            label="Out for Delivery"
-            value={stats.delivery}
-            active={
-              filterStatus ===
-              "out_for_delivery"
-            }
-            onClick={() =>
-              setFilterStatus(
-                "out_for_delivery"
-              )
-            }
-          />
-
-          <StatCard
-            label="Delivered"
+            title="Delivered"
             value={stats.delivered}
-            active={
-              filterStatus ===
-              "delivered"
-            }
-            onClick={() =>
-              setFilterStatus("delivered")
-            }
           />
 
           <StatCard
-            label="Canceled"
+            title="Canceled"
             value={stats.canceled}
-            active={
-              filterStatus ===
-              "canceled"
-            }
-            onClick={() =>
-              setFilterStatus("canceled")
+          />
+
+          <StatCard
+            title="Paid Orders"
+            value={stats.paid}
+          />
+
+          <StatCard
+            title="Payment Pending"
+            value={
+              stats.paymentPending
             }
           />
-        </div>
+        </section>
 
-        {/* REVENUE */}
+        {/* =================================================
+            REVENUE
+        ================================================= */}
 
-        <div className="mt-4 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                Order Value
-              </p>
+        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">
+            Order Value
+          </p>
 
-              <p className="mt-1 text-2xl font-bold text-[#5c4033]">
-                {formatPrice(
-                  totalRevenue
-                )}
-              </p>
-            </div>
+          <p className="mt-1 text-2xl font-bold text-gray-900">
+            {formatPrice(
+              stats.totalRevenue
+            )}
+          </p>
 
-            <p className="text-xs text-zinc-400">
-              Excludes canceled orders
-            </p>
-          </div>
-        </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Canceled orders are excluded.
+          </p>
+        </section>
 
-        {/* SEARCH + FILTER */}
+        {/* =================================================
+            FILTERS
+        ================================================= */}
 
-        <div className="mt-6 flex flex-col gap-3 md:flex-row">
-          <div className="relative flex-1">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-              ⌕
-            </span>
-
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-3">
             <input
-              type="text"
+              type="search"
               value={search}
-              onChange={(e) =>
+              onChange={(event) =>
                 setSearch(
-                  e.target.value
+                  event.target.value
                 )
               }
-              placeholder="Search by order ID, customer, phone, city..."
-              className="w-full rounded-2xl border border-zinc-200 bg-white py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-[#5c4033] focus:ring-1 focus:ring-[#5c4033]"
+              placeholder="Search order, customer, phone, city..."
+              className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black"
             />
-          </div>
 
-          <select
-            value={filterStatus}
-            onChange={(e) =>
-              setFilterStatus(
-                e.target.value as
-                  | "all"
-                  | OrderStatus
-              )
-            }
-            className="rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 text-sm font-semibold outline-none focus:border-[#5c4033]"
-          >
-            <option value="all">
-              All Orders
-            </option>
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value as
+                    | "all"
+                    | OrderStatus
+                )
+              }
+              className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+            >
+              <option value="all">
+                All Order Statuses
+              </option>
 
-            {STATUS_OPTIONS.map(
-              (status) => (
-                <option
-                  key={status.value}
-                  value={
-                    status.value
-                  }
-                >
-                  {status.label}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        {/* ORDERS */}
-
-        <div className="mt-6">
-          {loading ? (
-            <div className="rounded-3xl border border-zinc-200 bg-white p-12 text-center shadow-sm">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
-
-              <p className="mt-4 text-sm text-zinc-500">
-                Loading orders...
-              </p>
-            </div>
-          ) : filteredOrders.length ===
-            0 ? (
-            <div className="rounded-3xl border border-zinc-200 bg-white p-12 text-center shadow-sm">
-              <div className="text-5xl">
-                📦
-              </div>
-
-              <h2 className="mt-4 text-xl font-bold text-[#5c4033]">
-                No orders found
-              </h2>
-
-              <p className="mt-2 text-sm text-zinc-500">
-                Try changing the search
-                or status filter.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredOrders.map(
-                (order) => (
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    updating={
-                      updatingId ===
-                      order.id
-                    }
-                    onView={() =>
-                      setSelectedOrder(
-                        order
-                      )
-                    }
-                    onStatusChange={(
-                      status
-                    ) => {
-                      if (
-                        status ===
-                        "canceled"
-                      ) {
-                        setCancelOrder(
-                          order
-                        );
-                        setCancelReason(
-                          ""
-                        );
-                        setCancelCharge(
-                          "0"
-                        );
-                        return;
-                      }
-
-                      updateOrderStatus(
-                        order,
-                        status
-                      );
-                    }}
-                    onWhatsApp={() =>
-                      openWhatsApp(order)
-                    }
-                  />
+              {STATUS_OPTIONS.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
                 )
               )}
+            </select>
+
+            <select
+              value={paymentFilter}
+              onChange={(event) =>
+                setPaymentFilter(
+                  event.target.value as
+                    | "all"
+                    | PaymentStatus
+                )
+              }
+              className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+            >
+              <option value="all">
+                All Payment Statuses
+              </option>
+
+              {PAYMENT_OPTIONS.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+
+          <div className="mt-3 text-sm text-gray-500">
+            Showing{" "}
+            <strong>
+              {filteredOrders.length}
+            </strong>{" "}
+            of{" "}
+            <strong>
+              {orders.length}
+            </strong>{" "}
+            orders
+          </div>
+        </section>
+
+        {/* =================================================
+            ORDERS
+        ================================================= */}
+
+        {filteredOrders.length === 0 ? (
+          <section className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+            <div className="text-4xl">
+              📦
             </div>
-          )}
-        </div>
+
+            <h2 className="mt-3 text-lg font-semibold text-gray-900">
+              No orders found
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Try changing your search or
+              filters.
+            </p>
+          </section>
+        ) : (
+          <section className="space-y-4">
+            {filteredOrders.map(
+              (order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  updatingOrderId={
+                    updatingOrderId
+                  }
+                  onView={() =>
+                    setSelectedOrder(
+                      order
+                    )
+                  }
+                  onWhatsApp={() =>
+                    openWhatsApp(order)
+                  }
+                  onStatusChange={(
+                    status
+                  ) => {
+                    if (
+                      status ===
+                      "canceled"
+                    ) {
+                      setCancelOrder(
+                        order
+                      );
+                      setCancelReason(
+                        ""
+                      );
+                      setCancelCharge(
+                        ""
+                      );
+                      return;
+                    }
+
+                    updateOrderStatus(
+                      order,
+                      status
+                    );
+                  }}
+                  onPaymentChange={(
+                    paymentStatus
+                  ) =>
+                    updatePaymentStatus(
+                      order,
+                      paymentStatus
+                    )
+                  }
+                />
+              )
+            )}
+          </section>
+        )}
       </div>
 
-      {/* ORDER DETAILS MODAL */}
+      {/* ===================================================
+          ORDER DETAILS MODAL
+      =================================================== */}
 
       {selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
+          updating={
+            updatingOrderId ===
+            selectedOrder.id
+          }
           onClose={() =>
             setSelectedOrder(null)
           }
@@ -886,157 +1090,109 @@ export default function AdminOrdersPage() {
               selectedOrder
             )
           }
+          onStatusChange={(
+            status
+          ) => {
+            if (
+              status === "canceled"
+            ) {
+              setCancelOrder(
+                selectedOrder
+              );
+              setCancelReason("");
+              setCancelCharge("");
+              return;
+            }
+
+            updateOrderStatus(
+              selectedOrder,
+              status
+            );
+          }}
+          onPaymentChange={(
+            paymentStatus
+          ) =>
+            updatePaymentStatus(
+              selectedOrder,
+              paymentStatus
+            )
+          }
         />
       )}
 
-      {/* CANCELLATION MODAL */}
+      {/* ===================================================
+          CANCELLATION MODAL
+      =================================================== */}
 
       {cancelOrder && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-red-500">
-                  Cancel Order
-                </p>
+        <CancellationModal
+          order={cancelOrder}
+          reason={cancelReason}
+          charge={cancelCharge}
+          updating={
+            updatingOrderId ===
+            cancelOrder.id
+          }
+          onReasonChange={
+            setCancelReason
+          }
+          onChargeChange={
+            setCancelCharge
+          }
+          onClose={() => {
+            setCancelOrder(null);
+            setCancelReason("");
+            setCancelCharge("");
+          }}
+          onConfirm={() => {
+            const reason =
+              cancelReason.trim();
 
-                <h2 className="mt-1 text-xl font-bold text-[#5c4033]">
-                  Cancel #
-                  {cancelOrder.id
-                    .slice(0, 8)
-                    .toUpperCase()}
-                </h2>
-              </div>
+            if (!reason) {
+              setError(
+                "Cancellation reason is required."
+              );
+              return;
+            }
 
-              <button
-                type="button"
-                onClick={() =>
-                  setCancelOrder(null)
-                }
-                className="rounded-full px-3 py-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
-              >
-                ✕
-              </button>
-            </div>
+            const charge =
+              Number(
+                cancelCharge || 0
+              );
 
-            <div className="mt-6">
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Cancellation Reason
-              </label>
+            if (
+              !Number.isFinite(
+                charge
+              ) ||
+              charge < 0
+            ) {
+              setError(
+                "Please enter a valid cancellation charge."
+              );
+              return;
+            }
 
-              <textarea
-                value={cancelReason}
-                onChange={(e) =>
-                  setCancelReason(
-                    e.target.value
-                  )
-                }
-                rows={4}
-                placeholder="Enter cancellation reason..."
-                className="w-full resize-none rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-100"
-              />
-            </div>
+            if (
+              charge >
+              Number(
+                cancelOrder.total_amount ||
+                  0
+              )
+            ) {
+              setError(
+                "Cancellation charge cannot be greater than the order total."
+              );
+              return;
+            }
 
-            <div className="mt-5">
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Cancellation Charge
-              </label>
-
-              <input
-                type="number"
-                min="0"
-                value={cancelCharge}
-                onChange={(e) =>
-                  setCancelCharge(
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-100"
-              />
-
-              <p className="mt-2 text-xs text-zinc-400">
-                Maximum:
-                {" "}
-                {formatPrice(
-                  cancelOrder.total_amount
-                )}
-              </p>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setCancelOrder(null)
-                }
-                className="flex-1 rounded-full border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-              >
-                Keep Order
-              </button>
-
-              <button
-                type="button"
-                disabled={
-                  updatingId ===
-                  cancelOrder.id
-                }
-                onClick={() => {
-                  if (
-                    !cancelReason.trim()
-                  ) {
-                    setError(
-                      "Cancellation reason is required."
-                    );
-                    return;
-                  }
-
-                  const charge =
-                    Number(
-                      cancelCharge || 0
-                    );
-
-                  if (
-                    !Number.isFinite(
-                      charge
-                    ) ||
-                    charge < 0
-                  ) {
-                    setError(
-                      "Please enter a valid cancellation charge."
-                    );
-                    return;
-                  }
-
-                  if (
-                    charge >
-                    Number(
-                      cancelOrder.total_amount ||
-                        0
-                    )
-                  ) {
-                    setError(
-                      "Cancellation charge cannot be greater than the order total."
-                    );
-                    return;
-                  }
-
-                  updateOrderStatus(
-                    cancelOrder,
-                    "canceled",
-                    cancelReason,
-                    charge
-                  );
-                }}
-                className="flex-1 rounded-full bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {updatingId ===
-                cancelOrder.id
-                  ? "Canceling..."
-                  : "Cancel Order"}
-              </button>
-            </div>
-          </div>
-        </div>
+            updateOrderStatus(
+              cancelOrder,
+              "canceled",
+              reason,
+              charge
+            );
+          }}
+        />
       )}
     </main>
   );
@@ -1047,40 +1203,22 @@ export default function AdminOrdersPage() {
 ========================================================= */
 
 function StatCard({
-  label,
+  title,
   value,
-  active,
-  onClick,
 }: {
-  label: string;
+  title: string;
   value: number;
-  active: boolean;
-  onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-2xl border p-4 text-left transition ${
-        active
-          ? "border-[#5c4033] bg-[#5c4033] text-white shadow-md"
-          : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:shadow-sm"
-      }`}
-    >
-      <p
-        className={`text-xs font-semibold ${
-          active
-            ? "text-white/70"
-            : "text-zinc-400"
-        }`}
-      >
-        {label}
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p className="text-sm text-gray-500">
+        {title}
       </p>
 
-      <p className="mt-1 text-2xl font-bold">
+      <p className="mt-2 text-2xl font-bold text-gray-900">
         {value}
       </p>
-    </button>
+    </div>
   );
 }
 
@@ -1090,133 +1228,145 @@ function StatCard({
 
 function OrderCard({
   order,
-  updating,
+  updatingOrderId,
   onView,
-  onStatusChange,
   onWhatsApp,
+  onStatusChange,
+  onPaymentChange,
 }: {
   order: Order;
-  updating: boolean;
+  updatingOrderId: string | null;
   onView: () => void;
+  onWhatsApp: () => void;
   onStatusChange: (
     status: OrderStatus
   ) => void;
-  onWhatsApp: () => void;
+  onPaymentChange: (
+    status: PaymentStatus
+  ) => void;
 }) {
-  const items = Array.isArray(
-    order.items
-  )
-    ? order.items
-    : [];
+  const isUpdating =
+    updatingOrderId === order.id;
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
-      <div className="p-5 sm:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+    <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-bold text-gray-900">
+              #{String(order.id)
+                .slice(0, 8)
+                .toUpperCase()}
+            </h2>
 
-          {/* ORDER INFO */}
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-sm font-bold text-[#5c4033]">
-                #
-                {order.id
-                  .slice(0, 8)
-                  .toUpperCase()}
-              </span>
-
-              <span
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${getStatusClasses(
-                  order.order_status
-                )}`}
-              >
-                {getStatusLabel(
-                  order.order_status
-                )}
-              </span>
-            </div>
-
-            <div className="mt-2 text-xs text-zinc-400">
-              {formatDate(
-                order.created_at
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                order.order_status
+              )}`}
+            >
+              {getStatusLabel(
+                order.order_status
               )}
-            </div>
+            </span>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                  Customer
-                </p>
-
-                <p className="mt-1 truncate text-sm font-semibold text-zinc-800">
-                  {order.customer_name ||
-                    "—"}
-                </p>
-
-                <p className="mt-0.5 truncate text-xs text-zinc-500">
-                  {order.customer_phone ||
-                    "No phone"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                  Delivery
-                </p>
-
-                <p className="mt-1 line-clamp-2 text-sm text-zinc-700">
-                  {order.delivery_address ||
-                    "—"}
-                </p>
-
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  {order.city || "—"}
-                  {" "}
-                  {order.pincode || ""}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                  Items
-                </p>
-
-                <p className="mt-1 text-sm font-semibold text-zinc-800">
-                  {items.length}{" "}
-                  {items.length ===
-                  1
-                    ? "product"
-                    : "products"}
-                </p>
-
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Payment:{" "}
-                  {order.payment_status ||
-                    "pending"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                  Total
-                </p>
-
-                <p className="mt-1 text-lg font-bold text-[#5c4033]">
-                  {formatPrice(
-                    order.total_amount
-                  )}
-                </p>
-              </div>
-            </div>
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPaymentClasses(
+                order.payment_status
+              )}`}
+            >
+              Payment:{" "}
+              {getPaymentLabel(
+                order.payment_status
+              )}
+            </span>
           </div>
 
-          {/* ACTIONS */}
+          <p className="mt-1 text-xs text-gray-500">
+            {formatDate(
+              order.created_at
+            )}
+          </p>
+        </div>
 
-          <div className="flex flex-col gap-2 xl:w-56">
+        <div className="text-left lg:text-right">
+          <p className="text-xs text-gray-500">
+            Order Total
+          </p>
+
+          <p className="text-xl font-bold text-gray-900">
+            {formatPrice(
+              order.total_amount
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 border-t border-gray-100 pt-5 md:grid-cols-3">
+        <Info
+          label="Customer"
+          value={
+            order.customer_name ||
+            "—"
+          }
+          secondary={
+            order.customer_email
+          }
+        />
+
+        <Info
+          label="Phone"
+          value={
+            order.customer_phone ||
+            "—"
+          }
+        />
+
+        <Info
+          label="Delivery"
+          value={`${order.city || ""} ${
+            order.pincode || ""
+          }`}
+          secondary={
+            order.delivery_address
+          }
+        />
+      </div>
+
+      <div className="mt-5 flex flex-col gap-4 border-t border-gray-100 pt-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">
+              {Array.isArray(
+                order.items
+              )
+                ? order.items.length
+                : 0}{" "}
+              product
+              {Array.isArray(
+                order.items
+              ) &&
+              order.items.length !== 1
+                ? "s"
+                : ""}
+            </p>
+
+            <p className="text-xs text-gray-500">
+              Subtotal{" "}
+              {formatPrice(
+                order.subtotal
+              )}{" "}
+              • Delivery{" "}
+              {formatPrice(
+                order.delivery_charge
+              )}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={onView}
-              className="w-full rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               View Details
             </button>
@@ -1224,391 +1374,642 @@ function OrderCard({
             <button
               type="button"
               onClick={onWhatsApp}
-              className="w-full rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
+              disabled={
+                !order.customer_phone
+              }
+              className="rounded-lg border border-green-300 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              WhatsApp Customer
+              WhatsApp
             </button>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-500">
+              Order Status
+            </label>
 
             <select
               value={
-                (order.order_status ||
-                  "pending") as string
+                order.order_status
               }
-              disabled={updating}
-              onChange={(e) =>
+              disabled={isUpdating}
+              onChange={(event) =>
                 onStatusChange(
-                  e.target.value as OrderStatus
+                  event.target
+                    .value as OrderStatus
                 )
               }
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-[#5c4033] disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:cursor-not-allowed disabled:bg-gray-100"
             >
               {STATUS_OPTIONS.map(
-                (status) => (
+                (option) => (
                   <option
-                    key={
-                      status.value
-                    }
-                    value={
-                      status.value
-                    }
+                    key={option.value}
+                    value={option.value}
                   >
-                    {status.label}
+                    {option.label}
                   </option>
                 )
               )}
             </select>
+          </div>
 
-            {updating && (
-              <p className="text-center text-xs text-zinc-400">
-                Updating order...
-              </p>
-            )}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-500">
+              Payment Status
+            </label>
+
+            <select
+              value={
+                order.payment_status ||
+                "pending"
+              }
+              disabled={isUpdating}
+              onChange={(event) =>
+                onPaymentChange(
+                  event.target
+                    .value as PaymentStatus
+                )
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:cursor-not-allowed disabled:bg-gray-100"
+            >
+              {PAYMENT_OPTIONS.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                )
+              )}
+            </select>
           </div>
         </div>
+
+        {isUpdating && (
+          <p className="text-xs font-medium text-gray-500">
+            Updating order...
+          </p>
+        )}
       </div>
-    </div>
+    </article>
   );
 }
 
 /* =========================================================
-   DETAILS MODAL
+   ORDER DETAILS MODAL
 ========================================================= */
 
 function OrderDetailsModal({
   order,
+  updating,
   onClose,
   onWhatsApp,
+  onStatusChange,
+  onPaymentChange,
 }: {
   order: Order;
+  updating: boolean;
   onClose: () => void;
   onWhatsApp: () => void;
+  onStatusChange: (
+    status: OrderStatus
+  ) => void;
+  onPaymentChange: (
+    status: PaymentStatus
+  ) => void;
 }) {
-  const items = Array.isArray(
-    order.items
-  )
-    ? order.items
-    : [];
-
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+    <Modal onClose={onClose}>
+      <div className="space-y-6">
+        {/* Header */}
 
-        {/* MODAL HEADER */}
-
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-100 bg-white px-5 py-5 sm:px-7">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Order Details
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Order
             </p>
 
-            <h2 className="mt-1 font-mono text-xl font-bold text-[#5c4033]">
+            <h2 className="text-xl font-bold text-gray-900">
               #
-              {order.id
+              {String(order.id)
                 .slice(0, 8)
                 .toUpperCase()}
             </h2>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Created{" "}
+              {formatDate(
+                order.created_at
+              )}
+            </p>
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                order.order_status
+              )}`}
+            >
+              {getStatusLabel(
+                order.order_status
+              )}
+            </span>
+
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPaymentClasses(
+                order.payment_status
+              )}`}
+            >
+              Payment:{" "}
+              {getPaymentLabel(
+                order.payment_status
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* Customer */}
+
+        <section>
+          <SectionTitle>
+            Customer Information
+          </SectionTitle>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Info
+              label="Name"
+              value={
+                order.customer_name ||
+                "—"
+              }
+            />
+
+            <Info
+              label="Email"
+              value={
+                order.customer_email ||
+                "—"
+              }
+            />
+
+            <Info
+              label="Phone"
+              value={
+                order.customer_phone ||
+                "—"
+              }
+            />
+
+            <Info
+              label="User ID"
+              value={
+                order.user_id || "—"
+              }
+            />
+          </div>
+        </section>
+
+        {/* Address */}
+
+        <section>
+          <SectionTitle>
+            Delivery Address
+          </SectionTitle>
+
+          <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
+            {order.delivery_address ||
+              "—"}
+            <br />
+            {order.city || "—"} -{" "}
+            {order.pincode || "—"}
+          </div>
+        </section>
+
+        {/* Products */}
+
+        <section>
+          <SectionTitle>
+            Ordered Products
+          </SectionTitle>
+
+          <div className="space-y-3">
+            {Array.isArray(
+              order.items
+            ) &&
+              order.items.map(
+                (item, index) => (
+                  <div
+                    key={
+                      item.id ||
+                      index
+                    }
+                    className="flex gap-3 rounded-xl border border-gray-200 p-3"
+                  >
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                      {item.image ? (
+                        <img
+                          src={
+                            item.image
+                          }
+                          alt={
+                            item.name ||
+                            "Product"
+                          }
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900">
+                        {item.name ||
+                          "Product"}
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        Qty:{" "}
+                        {
+                          item.quantity
+                        }{" "}
+                        ×{" "}
+                        {formatPrice(
+                          item.price
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="font-semibold text-gray-900">
+                      {formatPrice(
+                        Number(
+                          item.price
+                        ) *
+                          Number(
+                            item.quantity
+                          )
+                      )}
+                    </div>
+                  </div>
+                )
+              )}
+          </div>
+        </section>
+
+        {/* Amount */}
+
+        <section>
+          <SectionTitle>
+            Payment & Amount
+          </SectionTitle>
+
+          <div className="space-y-2 rounded-xl bg-gray-50 p-4 text-sm">
+            <AmountRow
+              label="Subtotal"
+              value={formatPrice(
+                order.subtotal
+              )}
+            />
+
+            <AmountRow
+              label="Delivery Charge"
+              value={formatPrice(
+                order.delivery_charge
+              )}
+            />
+
+            {Number(
+              order.cancellation_charge ||
+                0
+            ) > 0 && (
+              <AmountRow
+                label="Cancellation Charge"
+                value={formatPrice(
+                  order.cancellation_charge
+                )}
+              />
+            )}
+
+            <div className="border-t border-gray-200 pt-2">
+              <AmountRow
+                label="Total"
+                value={formatPrice(
+                  order.total_amount
+                )}
+                strong
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Cancellation */}
+
+        {order.order_status ===
+          "canceled" && (
+          <section className="rounded-xl border border-red-200 bg-red-50 p-4">
+            <p className="text-sm font-semibold text-red-900">
+              Cancellation Details
+            </p>
+
+            <p className="mt-2 text-sm text-red-800">
+              <strong>
+                Reason:
+              </strong>{" "}
+              {order.cancellation_reason ||
+                "No reason provided"}
+            </p>
+
+            <p className="mt-1 text-sm text-red-800">
+              <strong>
+                Charge:
+              </strong>{" "}
+              {formatPrice(
+                order.cancellation_charge
+              )}
+            </p>
+          </section>
+        )}
+
+        {/* Controls */}
+
+        <section>
+          <SectionTitle>
+            Admin Controls
+          </SectionTitle>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-500">
+                Order Status
+              </label>
+
+              <select
+                value={
+                  order.order_status
+                }
+                disabled={updating}
+                onChange={(event) =>
+                  onStatusChange(
+                    event.target
+                      .value as OrderStatus
+                  )
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:bg-gray-100"
+              >
+                {STATUS_OPTIONS.map(
+                  (option) => (
+                    <option
+                      key={
+                        option.value
+                      }
+                      value={
+                        option.value
+                      }
+                    >
+                      {
+                        option.label
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-500">
+                Payment Status
+              </label>
+
+              <select
+                value={
+                  order.payment_status ||
+                  "pending"
+                }
+                disabled={updating}
+                onChange={(event) =>
+                  onPaymentChange(
+                    event.target
+                      .value as PaymentStatus
+                  )
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:bg-gray-100"
+              >
+                {PAYMENT_OPTIONS.map(
+                  (option) => (
+                    <option
+                      key={
+                        option.value
+                      }
+                      value={
+                        option.value
+                      }
+                    >
+                      {
+                        option.label
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+
+        <div className="flex flex-col gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onWhatsApp}
+            disabled={
+              !order.customer_phone
+            }
+            className="rounded-xl border border-green-300 px-4 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            WhatsApp Customer
+          </button>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-3 py-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            className="rounded-xl bg-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
           >
-            ✕
+            Close
           </button>
         </div>
+      </div>
+    </Modal>
+  );
+}
 
-        <div className="space-y-6 p-5 sm:p-7">
+/* =========================================================
+   CANCELLATION MODAL
+========================================================= */
 
-          {/* STATUS */}
+function CancellationModal({
+  order,
+  reason,
+  charge,
+  updating,
+  onReasonChange,
+  onChargeChange,
+  onClose,
+  onConfirm,
+}: {
+  order: Order;
+  reason: string;
+  charge: string;
+  updating: boolean;
+  onReasonChange: (
+    value: string
+  ) => void;
+  onChargeChange: (
+    value: string
+  ) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal onClose={onClose}>
+      <div className="space-y-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-red-600">
+            Cancel Order
+          </p>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#faf9f6] p-4">
-            <div>
-              <p className="text-xs text-zinc-400">
-                Current Status
-              </p>
+          <h2 className="mt-1 text-xl font-bold text-gray-900">
+            Cancel #
+            {String(order.id)
+              .slice(0, 8)
+              .toUpperCase()}
+          </h2>
 
-              <span
-                className={`mt-1 inline-flex rounded-full border px-3 py-1.5 text-xs font-bold ${getStatusClasses(
-                  order.order_status
-                )}`}
-              >
-                {getStatusLabel(
-                  order.order_status
-                )}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={onWhatsApp}
-              className="rounded-full bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700"
-            >
-              WhatsApp Customer
-            </button>
-          </div>
-
-          {/* CUSTOMER */}
-
-          <section>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#5c4033]">
-              Customer Information
-            </h3>
-
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <Info
-                label="Name"
-                value={
-                  order.customer_name
-                }
-              />
-
-              <Info
-                label="Phone"
-                value={
-                  order.customer_phone
-                }
-              />
-
-              <Info
-                label="Email"
-                value={
-                  order.customer_email
-                }
-              />
-
-              <Info
-                label="User ID"
-                value={
-                  order.user_id
-                }
-              />
-            </div>
-          </section>
-
-          {/* DELIVERY */}
-
-          <section>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#5c4033]">
-              Delivery Address
-            </h3>
-
-            <div className="mt-3 rounded-2xl border border-zinc-200 bg-white p-4">
-              <p className="text-sm font-semibold text-zinc-800">
-                {order.delivery_address ||
-                  "Address not available"}
-              </p>
-
-              <p className="mt-1 text-sm text-zinc-500">
-                {order.city || ""}
-                {order.city &&
-                order.pincode
-                  ? " - "
-                  : ""}
-                {order.pincode || ""}
-              </p>
-            </div>
-          </section>
-
-          {/* ITEMS */}
-
-          <section>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#5c4033]">
-              Ordered Products
-            </h3>
-
-            <div className="mt-3 space-y-3">
-              {items.length ===
-              0 ? (
-                <div className="rounded-2xl border border-zinc-200 p-4 text-sm text-zinc-500">
-                  No product details
-                  available.
-                </div>
-              ) : (
-                items.map(
-                  (item, index) => {
-                    const price =
-                      Number(
-                        item.price ||
-                          0
-                      );
-
-                    const quantity =
-                      Number(
-                        item.quantity ||
-                          1
-                      );
-
-                    return (
-                      <div
-                        key={
-                          item.id ||
-                          item.slug ||
-                          index
-                        }
-                        className="flex gap-3 rounded-2xl border border-zinc-100 bg-[#faf9f6] p-3"
-                      >
-                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#eee8dc]">
-                          {item.image ? (
-                            <img
-                              src={
-                                item.image
-                              }
-                              alt={
-                                item.name ||
-                                "Product"
-                              }
-                              className="h-full w-full object-contain p-2"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-xl">
-                              📦
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-sm font-semibold text-zinc-800">
-                            {item.name ||
-                              "Product"}
-                          </p>
-
-                          <p className="mt-1 text-xs text-zinc-500">
-                            Qty:{" "}
-                            {quantity}
-                            {" × "}
-                            {formatPrice(
-                              price
-                            )}
-                          </p>
-                        </div>
-
-                        <p className="shrink-0 text-sm font-bold text-[#5c4033]">
-                          {formatPrice(
-                            price *
-                              quantity
-                          )}
-                        </p>
-                      </div>
-                    );
-                  }
-                )
-              )}
-            </div>
-          </section>
-
-          {/* PRICE */}
-
-          <section className="rounded-2xl bg-[#faf9f6] p-5">
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">
-                  Subtotal
-                </span>
-
-                <span className="font-semibold">
-                  {formatPrice(
-                    order.subtotal
-                  )}
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-zinc-500">
-                  Delivery Fee
-                </span>
-
-                <span className="font-semibold">
-                  {Number(
-                    order.delivery_charge ||
-                      0
-                  ) === 0
-                    ? "FREE"
-                    : formatPrice(
-                        order.delivery_charge
-                      )}
-                </span>
-              </div>
-
-              {Number(
-                order.cancellation_charge ||
-                  0
-              ) > 0 && (
-                <div className="flex justify-between text-red-600">
-                  <span>
-                    Cancellation Charge
-                  </span>
-
-                  <span className="font-semibold">
-                    {formatPrice(
-                      order.cancellation_charge
-                    )}
-                  </span>
-                </div>
-              )}
-
-              <div className="border-t border-zinc-200 pt-3">
-                <div className="flex justify-between">
-                  <span className="font-bold text-[#5c4033]">
-                    Total
-                  </span>
-
-                  <span className="text-xl font-bold text-[#5c4033]">
-                    {formatPrice(
-                      order.total_amount
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* CANCELLATION */}
-
-          {order.order_status ===
-            "canceled" && (
-            <section className="rounded-2xl border border-red-100 bg-red-50 p-5">
-              <h3 className="text-sm font-bold text-red-700">
-                Cancellation Details
-              </h3>
-
-              <p className="mt-2 text-sm text-red-600">
-                <strong>
-                  Reason:
-                </strong>{" "}
-                {order.cancellation_reason ||
-                  "Not specified"}
-              </p>
-
-              <p className="mt-1 text-sm text-red-600">
-                <strong>
-                  Charge:
-                </strong>{" "}
-                {formatPrice(
-                  order.cancellation_charge
-                )}
-              </p>
-            </section>
-          )}
-
-          {/* DATE */}
-
-          <section className="grid gap-3 sm:grid-cols-2">
-            <Info
-              label="Created At"
-              value={formatDate(
-                order.created_at
-              )}
-            />
-
-            <Info
-              label="Last Updated"
-              value={formatDate(
-                order.updated_at
-              )}
-            />
-          </section>
+          <p className="mt-1 text-sm text-gray-500">
+            Enter the cancellation reason
+            and applicable charge.
+          </p>
         </div>
+
+        <div className="rounded-xl bg-gray-50 p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">
+              Order Total
+            </span>
+
+            <strong className="text-gray-900">
+              {formatPrice(
+                order.total_amount
+              )}
+            </strong>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold text-gray-800">
+            Cancellation Reason
+          </label>
+
+          <textarea
+            value={reason}
+            onChange={(event) =>
+              onReasonChange(
+                event.target.value
+              )
+            }
+            rows={4}
+            placeholder="Enter cancellation reason..."
+            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold text-gray-800">
+            Cancellation Charge
+          </label>
+
+          <input
+            type="number"
+            min="0"
+            step="1"
+            max={Number(
+              order.total_amount || 0
+            )}
+            value={charge}
+            onChange={(event) =>
+              onChargeChange(
+                event.target.value
+              )
+            }
+            placeholder="0"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+          />
+
+          <p className="mt-1 text-xs text-gray-500">
+            Maximum:
+            {" "}
+            {formatPrice(
+              order.total_amount
+            )}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={updating}
+            className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Keep Order
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={updating}
+            className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {updating
+              ? "Canceling..."
+              : "Cancel Order"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+function Modal({
+  children,
+  onClose,
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          onClose();
+        }
+      }}
+    >
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+        {children}
       </div>
     </div>
   );
@@ -1621,19 +2022,81 @@ function OrderDetailsModal({
 function Info({
   label,
   value,
+  secondary,
 }: {
   label: string;
-  value?: string | null;
+  value: string;
+  secondary?: string | null;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-[#faf9f6] p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-semibold text-zinc-700">
-        {value || "—"}
+      <p className="mt-1 break-words text-sm font-medium text-gray-900">
+        {value}
       </p>
+
+      {secondary && (
+        <p className="mt-1 break-words text-xs text-gray-500">
+          {secondary}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   SECTION TITLE
+========================================================= */
+
+function SectionTitle({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <h3 className="mb-3 text-sm font-bold text-gray-900">
+      {children}
+    </h3>
+  );
+}
+
+/* =========================================================
+   AMOUNT ROW
+========================================================= */
+
+function AmountRow({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span
+        className={
+          strong
+            ? "font-bold text-gray-900"
+            : "text-gray-600"
+        }
+      >
+        {label}
+      </span>
+
+      <span
+        className={
+          strong
+            ? "font-bold text-gray-900"
+            : "font-medium text-gray-900"
+        }
+      >
+        {value}
+      </span>
     </div>
   );
 }
