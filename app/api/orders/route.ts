@@ -18,7 +18,11 @@ const allowedStatuses = [
 
 type OrderStatus = (typeof allowedStatuses)[number];
 
-type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded";
 
 const allowedPaymentStatuses: PaymentStatus[] = [
   "pending",
@@ -81,22 +85,6 @@ function formatPaymentStatus(status: string) {
 
 /* =========================================================
    STATUS TRANSITIONS
-
-   pending
-      ↓
-   confirmed
-      ↓
-   out_for_delivery
-      ↓
-   delivered
-
-   Cancellation:
-   pending → canceled
-   confirmed → canceled
-   out_for_delivery → canceled
-
-   delivered / canceled
-      → terminal
 ========================================================= */
 
 function isValidStatusTransition(
@@ -228,7 +216,7 @@ function normalizeIndianPhone(phone: string) {
 }
 
 /* =========================================================
-   WHATSAPP ORDER STATUS
+   WHATSAPP ORDER UPDATE
 ========================================================= */
 
 async function sendWhatsAppUpdate({
@@ -321,14 +309,15 @@ async function sendWhatsAppUpdate({
     if (!response.ok) {
       console.error(
         "WHATSAPP ORDER API ERROR:",
-        result
+        JSON.stringify(result)
       );
+
       return;
     }
 
     console.log(
       "WHATSAPP ORDER UPDATE SENT:",
-      result
+      JSON.stringify(result)
     );
   } catch (error) {
     console.error(
@@ -360,8 +349,7 @@ async function sendWhatsAppPaymentUpdate({
     process.env.WHATSAPP_PHONE_NUMBER_ID;
 
   const templateName =
-    process.env.WHATSAPP_PAYMENT_TEMPLATE_NAME ||
-    process.env.WHATSAPP_ORDER_TEMPLATE_NAME;
+    process.env.WHATSAPP_PAYMENT_TEMPLATE_NAME;
 
   if (
     !accessToken ||
@@ -369,7 +357,7 @@ async function sendWhatsAppPaymentUpdate({
     !templateName
   ) {
     console.log(
-      "WhatsApp payment update skipped: credentials/template not configured."
+      "WhatsApp payment update skipped: credentials/payment template not configured."
     );
 
     return;
@@ -435,14 +423,15 @@ async function sendWhatsAppPaymentUpdate({
     if (!response.ok) {
       console.error(
         "WHATSAPP PAYMENT API ERROR:",
-        result
+        JSON.stringify(result)
       );
+
       return;
     }
 
     console.log(
       "WHATSAPP PAYMENT UPDATE SENT:",
-      result
+      JSON.stringify(result)
     );
   } catch (error) {
     console.error(
@@ -465,13 +454,17 @@ async function sendEmailNotification({
   subject: string;
   html: string;
 }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
+  const apiKey =
+    process.env.RESEND_API_KEY;
+
+  const from =
+    process.env.EMAIL_FROM;
 
   if (!apiKey || !from) {
     console.log(
       "Email skipped: RESEND_API_KEY or EMAIL_FROM missing."
     );
+
     return;
   }
 
@@ -479,6 +472,7 @@ async function sendEmailNotification({
     console.log(
       "Email skipped: invalid recipient."
     );
+
     return;
   }
 
@@ -505,14 +499,15 @@ async function sendEmailNotification({
     if (!response.ok) {
       console.error(
         "EMAIL API ERROR:",
-        result
+        JSON.stringify(result)
       );
+
       return;
     }
 
     console.log(
       "EMAIL SENT:",
-      result
+      JSON.stringify(result)
     );
   } catch (error) {
     console.error(
@@ -523,7 +518,7 @@ async function sendEmailNotification({
 }
 
 /* =========================================================
-   ORDER EMAIL
+   ORDER EMAIL HTML
 ========================================================= */
 
 function orderEmailHtml(
@@ -531,43 +526,51 @@ function orderEmailHtml(
   title: string,
   extraHtml = ""
 ) {
-  const orderId = escapeHtml(order?.id);
+  const orderId =
+    escapeHtml(order?.id);
 
-  const customerName = escapeHtml(
-    order?.customer_name || "Customer"
-  );
+  const customerName =
+    escapeHtml(
+      order?.customer_name || "Customer"
+    );
 
-  const customerEmail = escapeHtml(
-    order?.customer_email || ""
-  );
+  const customerEmail =
+    escapeHtml(
+      order?.customer_email || ""
+    );
 
-  const customerPhone = escapeHtml(
-    order?.customer_phone || ""
-  );
+  const customerPhone =
+    escapeHtml(
+      order?.customer_phone || ""
+    );
 
-  const address = escapeHtml(
-    order?.delivery_address || ""
-  );
+  const address =
+    escapeHtml(
+      order?.delivery_address || ""
+    );
 
-  const city = escapeHtml(
-    order?.city || ""
-  );
+  const city =
+    escapeHtml(order?.city || "");
 
-  const pincode = escapeHtml(
-    order?.pincode || ""
-  );
+  const pincode =
+    escapeHtml(order?.pincode || "");
 
-  const totalAmount = Number(
-    order?.total_amount || 0
-  );
+  const totalAmount =
+    Number(order?.total_amount || 0);
 
-  const paymentStatus = formatPaymentStatus(
-    String(order?.payment_status || "pending")
-  );
+  const paymentStatus =
+    formatPaymentStatus(
+      String(
+        order?.payment_status || "pending"
+      )
+    );
 
-  const orderStatus = formatStatus(
-    String(order?.order_status || "pending")
-  );
+  const orderStatus =
+    formatStatus(
+      String(
+        order?.order_status || "pending"
+      )
+    );
 
   return `
     <div style="
@@ -576,9 +579,12 @@ function orderEmailHtml(
       max-width: 650px;
       margin: 0 auto;
       padding: 20px;
+      color: #222;
     ">
 
-      <h2>${escapeHtml(title)}</h2>
+      <h2>
+        ${escapeHtml(title)}
+      </h2>
 
       <p>
         Hello <strong>${customerName}</strong>,
@@ -659,45 +665,52 @@ export async function POST(request: Request) {
         {
           success: false,
           error:
-            auth.error || "Unauthorized.",
+            auth.error ||
+            "Unauthorized.",
         },
         { status: 401 }
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const customerName = String(
-      body.customer_name || ""
-    ).trim();
+    const customerName =
+      String(
+        body.customer_name || ""
+      ).trim();
 
-    const customerEmail = String(
-      body.customer_email ||
-        auth.user.email ||
-        ""
-    )
-      .trim()
-      .toLowerCase();
+    const customerEmail =
+      String(
+        body.customer_email ||
+          auth.user.email ||
+          ""
+      )
+        .trim()
+        .toLowerCase();
 
-    const customerPhone = String(
-      body.customer_phone || ""
-    ).trim();
+    const customerPhone =
+      String(
+        body.customer_phone || ""
+      ).trim();
 
-    const deliveryAddress = String(
-      body.delivery_address || ""
-    ).trim();
+    const deliveryAddress =
+      String(
+        body.delivery_address || ""
+      ).trim();
 
-    const city = String(
-      body.city || ""
-    ).trim();
+    const city =
+      String(body.city || "").trim();
 
-    const pincode = String(
-      body.pincode || ""
-    ).trim();
+    const pincode =
+      String(
+        body.pincode || ""
+      ).trim();
 
-    const items = Array.isArray(body.items)
-      ? body.items
-      : [];
+    const items =
+      Array.isArray(body.items)
+        ? body.items
+        : [];
 
     /* ---------------- VALIDATION ---------------- */
 
@@ -705,7 +718,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Customer name is required.",
+          error:
+            "Customer name is required.",
         },
         { status: 400 }
       );
@@ -718,14 +732,17 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Valid customer email is required.",
+          error:
+            "Valid customer email is required.",
         },
         { status: 400 }
       );
     }
 
     if (
-      !/^[6-9]\d{9}$/.test(customerPhone)
+      !/^[6-9]\d{9}$/.test(
+        customerPhone
+      )
     ) {
       return NextResponse.json(
         {
@@ -741,7 +758,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Delivery address is required.",
+          error:
+            "Delivery address is required.",
         },
         { status: 400 }
       );
@@ -781,11 +799,12 @@ export async function POST(request: Request) {
 
     /* ---------------- SANITIZE ITEMS ---------------- */
 
-    const requestedItems = items.map(
-      (item: any) => {
-        const quantity = Number(
-          item?.quantity || 1
-        );
+    const requestedItems =
+      items.map((item: any) => {
+        const quantity =
+          Number(
+            item?.quantity || 1
+          );
 
         return {
           id: String(
@@ -798,8 +817,7 @@ export async function POST(request: Request) {
               ? Math.floor(quantity)
               : 1,
         };
-      }
-    );
+      });
 
     const productIds = [
       ...new Set(
@@ -818,7 +836,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid products in cart.",
+          error:
+            "Invalid products in cart.",
         },
         { status: 400 }
       );
@@ -829,12 +848,13 @@ export async function POST(request: Request) {
     const {
       data: products,
       error: productsError,
-    } = await supabaseAdmin
-      .from("products")
-      .select(
-        "id, name, slug, price, image"
-      )
-      .in("id", productIds);
+    } =
+      await supabaseAdmin
+        .from("products")
+        .select(
+          "id, name, slug, price, image"
+        )
+        .in("id", productIds);
 
     if (productsError) {
       console.error(
@@ -854,7 +874,8 @@ export async function POST(request: Request) {
 
     if (
       !products ||
-      products.length !== productIds.length
+      products.length !==
+        productIds.length
     ) {
       return NextResponse.json(
         {
@@ -866,52 +887,58 @@ export async function POST(request: Request) {
       );
     }
 
-    const productMap = new Map(
-      products.map((product) => [
-        String(product.id),
-        product,
-      ])
-    );
+    const productMap =
+      new Map(
+        products.map(
+          (product) => [
+            String(product.id),
+            product,
+          ]
+        )
+      );
 
     /* ---------------- BUILD ORDER ITEMS ---------------- */
 
-    const sanitizedItems = requestedItems.map(
-      (item: {
-        id: string;
-        quantity: number;
-      }) => {
-        const product =
-          productMap.get(item.id);
+    const sanitizedItems =
+      requestedItems.map(
+        (item: {
+          id: string;
+          quantity: number;
+        }) => {
+          const product =
+            productMap.get(
+              item.id
+            );
 
-        if (!product) {
-          throw new Error(
-            `Product not found: ${item.id}`
-          );
+          if (!product) {
+            throw new Error(
+              `Product not found: ${item.id}`
+            );
+          }
+
+          const price =
+            Number(product.price);
+
+          if (
+            !Number.isFinite(price) ||
+            price <= 0
+          ) {
+            throw new Error(
+              `Invalid price for product: ${product.name}`
+            );
+          }
+
+          return {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price,
+            quantity:
+              item.quantity,
+            image: product.image,
+          };
         }
-
-        const price = Number(
-          product.price
-        );
-
-        if (
-          !Number.isFinite(price) ||
-          price <= 0
-        ) {
-          throw new Error(
-            `Invalid price for product: ${product.name}`
-          );
-        }
-
-        return {
-          id: product.id,
-          name: product.name,
-          slug: product.slug,
-          price,
-          quantity: item.quantity,
-          image: product.image,
-        };
-      }
-    );
+      );
 
     /* ---------------- SUBTOTAL ---------------- */
 
@@ -962,49 +989,51 @@ export async function POST(request: Request) {
     const {
       data: order,
       error: orderError,
-    } = await supabaseAdmin
-      .from("orders")
-      .insert({
-        user_id: auth.user.id,
+    } =
+      await supabaseAdmin
+        .from("orders")
+        .insert({
+          user_id:
+            auth.user.id,
 
-        customer_name:
-          customerName,
+          customer_name:
+            customerName,
 
-        customer_email:
-          customerEmail,
+          customer_email:
+            customerEmail,
 
-        customer_phone:
-          customerPhone,
+          customer_phone:
+            customerPhone,
 
-        delivery_address:
-          deliveryAddress,
+          delivery_address:
+            deliveryAddress,
 
-        city,
+          city,
 
-        pincode,
+          pincode,
 
-        items:
-          sanitizedItems,
+          items:
+            sanitizedItems,
 
-        subtotal,
+          subtotal,
 
-        delivery_charge:
-          deliveryCharge,
+          delivery_charge:
+            deliveryCharge,
 
-        cancellation_charge:
-          0,
+          cancellation_charge:
+            0,
 
-        total_amount:
-          totalAmount,
+          total_amount:
+            totalAmount,
 
-        payment_status:
-          "pending",
+          payment_status:
+            "pending",
 
-        order_status:
-          "pending",
-      })
-      .select()
-      .single();
+          order_status:
+            "pending",
+        })
+        .select()
+        .single();
 
     if (orderError) {
       console.error(
@@ -1041,28 +1070,26 @@ export async function POST(request: Request) {
 
     /* ---------------- ADMIN EMAIL ---------------- */
 
-    const adminEmailAddress =
-      process.env.ADMIN_EMAIL?.trim();
-
-    if (adminEmailAddress) {
+    if (adminEmail) {
       await sendEmailNotification({
-        to: adminEmailAddress,
+        to: adminEmail,
 
         subject:
           `🛒 New Order #${shortOrderId(
             String(order.id)
           )}`,
 
-        html: orderEmailHtml(
-          order,
-          "New Order Received",
-          `
-            <p>
-              A new order has been placed on
-              <strong>Dayal Kitchen Ware</strong>.
-            </p>
-          `
-        ),
+        html:
+          orderEmailHtml(
+            order,
+            "New Order Received",
+            `
+              <p>
+                A new order has been placed on
+                <strong>Dayal Kitchen Ware</strong>.
+              </p>
+            `
+          ),
       });
     }
 
@@ -1076,20 +1103,21 @@ export async function POST(request: Request) {
           String(order.id)
         )} - Order Received`,
 
-      html: orderEmailHtml(
-        order,
-        "Order Received",
-        `
-          <p>
-            Your order has been successfully received.
-          </p>
+      html:
+        orderEmailHtml(
+          order,
+          "Order Received",
+          `
+            <p>
+              Your order has been successfully received.
+            </p>
 
-          <p>
-            <strong>Current Status:</strong>
-            Pending
-          </p>
-        `
-      ),
+            <p>
+              <strong>Current Status:</strong>
+              Pending
+            </p>
+          `
+        ),
     });
 
     /* ---------------- CUSTOMER WHATSAPP ---------------- */
@@ -1135,7 +1163,9 @@ export async function POST(request: Request) {
    CUSTOMER → OWN ORDERS
 ========================================================= */
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request
+) {
   try {
     const auth =
       await authenticateUser(request);
@@ -1152,22 +1182,27 @@ export async function GET(request: Request) {
       );
     }
 
-    let query = supabaseAdmin
-      .from("orders")
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+    let query =
+      supabaseAdmin
+        .from("orders")
+        .select("*")
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          }
+        );
 
     if (isAdmin(auth.user)) {
       console.log(
         "DAYAL KITCHEN WARE ADMIN ORDERS REQUEST"
       );
     } else {
-      query = query.eq(
-        "user_id",
-        auth.user.id
-      );
+      query =
+        query.eq(
+          "user_id",
+          auth.user.id
+        );
     }
 
     const {
@@ -1226,7 +1261,9 @@ export async function GET(request: Request) {
    - Cancel own pending/confirmed order
 ========================================================= */
 
-export async function PATCH(request: Request) {
+export async function PATCH(
+  request: Request
+) {
   try {
     const auth =
       await authenticateUser(request);
@@ -1243,11 +1280,11 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const id = String(
-      body.id || ""
-    ).trim();
+    const id =
+      String(body.id || "").trim();
 
     const requestedStatusRaw =
       String(
@@ -1257,7 +1294,8 @@ export async function PATCH(request: Request) {
         .toLowerCase();
 
     const requestedPaymentStatusRaw =
-      body.payment_status === undefined ||
+      body.payment_status ===
+        undefined ||
       body.payment_status === null
         ? null
         : String(
@@ -1284,7 +1322,8 @@ export async function PATCH(request: Request) {
       | null = null;
 
     if (
-      requestedPaymentStatusRaw !== null
+      requestedPaymentStatusRaw !==
+      null
     ) {
       if (
         !isValidPaymentStatus(
@@ -1350,11 +1389,12 @@ export async function PATCH(request: Request) {
     const {
       data: existingOrder,
       error: fetchError,
-    } = await supabaseAdmin
-      .from("orders")
-      .select("*")
-      .eq("id", id)
-      .single();
+    } =
+      await supabaseAdmin
+        .from("orders")
+        .select("*")
+        .eq("id", id)
+        .single();
 
     if (
       fetchError ||
@@ -1383,7 +1423,6 @@ export async function PATCH(request: Request) {
 
     if (!admin) {
       if (
-        !requestedStatus &&
         paymentStatus !== null
       ) {
         return NextResponse.json(
@@ -1444,32 +1483,24 @@ export async function PATCH(request: Request) {
         );
       }
 
-      const reason = String(
-        body.cancellation_reason ||
-          "Customer requested cancellation."
-      ).trim();
+      const reason =
+        String(
+          body.cancellation_reason ||
+            ""
+        ).trim();
 
-      if (!reason) {
+      if (
+        reason.length < 3
+      ) {
         return NextResponse.json(
           {
             success: false,
             error:
-              "Cancellation reason is required.",
+              "Please provide a valid cancellation reason.",
           },
           { status: 400 }
         );
       }
-
-      const updateData: Record<
-        string,
-        unknown
-      > = {
-        order_status: "canceled",
-        cancellation_reason: reason,
-        cancellation_charge: 0,
-        updated_at:
-          new Date().toISOString(),
-      };
 
       const {
         data: updatedOrder,
@@ -1477,7 +1508,19 @@ export async function PATCH(request: Request) {
       } =
         await supabaseAdmin
           .from("orders")
-          .update(updateData)
+          .update({
+            order_status:
+              "canceled",
+
+            cancellation_reason:
+              reason,
+
+            cancellation_charge:
+              0,
+
+            updated_at:
+              new Date().toISOString(),
+          })
           .eq("id", id)
           .select()
           .single();
@@ -1502,7 +1545,12 @@ export async function PATCH(request: Request) {
         );
       }
 
-      /* ADMIN EMAIL */
+      console.log(
+        "CUSTOMER CANCELED ORDER:",
+        id
+      );
+
+      /* ---------------- ADMIN EMAIL ---------------- */
 
       if (adminEmail) {
         await sendEmailNotification({
@@ -1510,16 +1558,65 @@ export async function PATCH(request: Request) {
 
           subject:
             `Order #${shortOrderId(
-              String(id)
+              id
             )} - Customer Canceled`,
 
-          html: orderEmailHtml(
+          html:
+            orderEmailHtml(
+              updatedOrder,
+              "Customer Canceled an Order",
+              `
+                <p>
+                  The customer has canceled this order.
+                </p>
+
+                <p>
+                  <strong>Cancellation Reason:</strong>
+                  ${escapeHtml(
+                    reason
+                  )}
+                </p>
+
+                <p>
+                  <strong>Cancellation Charge:</strong>
+                  ₹0
+                </p>
+              `
+            ),
+        });
+      }
+
+      /* ---------------- CUSTOMER EMAIL ---------------- */
+
+      await sendEmailNotification({
+        to:
+          String(
+            existingOrder.customer_email ||
+              auth.user.email ||
+              ""
+          )
+            .trim()
+            .toLowerCase(),
+
+        subject:
+          `Order #${shortOrderId(
+            id
+          )} - Order Canceled`,
+
+        html:
+          orderEmailHtml(
             updatedOrder,
-            "Customer Canceled an Order",
+            "Order Canceled",
             `
               <p>
+                Your order has been canceled successfully.
+              </p>
+
+              <p>
                 <strong>Cancellation Reason:</strong>
-                ${escapeHtml(reason)}
+                ${escapeHtml(
+                  reason
+                )}
               </p>
 
               <p>
@@ -1528,59 +1625,30 @@ export async function PATCH(request: Request) {
               </p>
             `
           ),
-        });
-      }
-
-      /* CUSTOMER EMAIL */
-
-      await sendEmailNotification({
-        to: String(
-          existingOrder.customer_email ||
-            auth.user.email ||
-            ""
-        )
-          .trim()
-          .toLowerCase(),
-
-        subject:
-          `Order #${shortOrderId(
-            String(id)
-          )} - Order Canceled`,
-
-        html: orderEmailHtml(
-          updatedOrder,
-          "Order Canceled",
-          `
-            <p>
-              Your order has been canceled successfully.
-            </p>
-
-            <p>
-              <strong>Cancellation Reason:</strong>
-              ${escapeHtml(reason)}
-            </p>
-
-            <p>
-              <strong>Cancellation Charge:</strong>
-              ₹0
-            </p>
-          `
-        ),
       });
 
-      /* CUSTOMER WHATSAPP */
+      /* ---------------- CUSTOMER WHATSAPP ---------------- */
 
       await sendWhatsAppUpdate({
-        phone: String(
-          existingOrder.customer_phone ||
-            ""
-        ),
-        customerName: String(
-          existingOrder.customer_name ||
-            "Customer"
-        ),
-        orderId: String(existingOrder.id),
-        status: "canceled",
+        phone:
+          String(
+            existingOrder.customer_phone ||
+              ""
+          ),
+
+        customerName:
+          String(
+            existingOrder.customer_name ||
+              "Customer"
+          ),
+
+        orderId:
+          String(
+            existingOrder.id
+          ),
+
+        status:
+          "canceled",
       });
 
       return NextResponse.json({
@@ -1608,6 +1676,7 @@ export async function PATCH(request: Request) {
           .update({
             payment_status:
               paymentStatus,
+
             updated_at:
               new Date().toISOString(),
           })
@@ -1649,43 +1718,56 @@ export async function PATCH(request: Request) {
             "Customer"
         );
 
+      /* ---------------- CUSTOMER EMAIL ---------------- */
+
       if (customerEmail) {
         await sendEmailNotification({
           to: customerEmail,
 
           subject:
             `Order #${shortOrderId(
-              String(id)
+              id
             )} - Payment Status Updated`,
 
-          html: orderEmailHtml(
-            updatedOrder,
-            "Payment Status Updated",
-            `
-              <p>
-                Your payment status has been updated.
-              </p>
+          html:
+            orderEmailHtml(
+              updatedOrder,
+              "Payment Status Updated",
+              `
+                <p>
+                  Your payment status has been updated by
+                  <strong>Dayal Kitchen Ware</strong>.
+                </p>
 
-              <p>
-                <strong>Payment Status:</strong>
-                ${escapeHtml(
-                  formatPaymentStatus(
-                    paymentStatus
-                  )
-                )}
-              </p>
-            `
-          ),
+                <p>
+                  <strong>Payment Status:</strong>
+                  ${escapeHtml(
+                    formatPaymentStatus(
+                      paymentStatus
+                    )
+                  )}
+                </p>
+              `
+            ),
         });
       }
 
+      /* ---------------- CUSTOMER WHATSAPP ---------------- */
+
       await sendWhatsAppPaymentUpdate({
-        phone: String(
-          existingOrder.customer_phone ||
-            ""
-        ),
+        phone:
+          String(
+            existingOrder.customer_phone ||
+              ""
+          ),
+
         customerName,
-        orderId: String(existingOrder.id),
+
+        orderId:
+          String(
+            existingOrder.id
+          ),
+
         paymentStatus,
       });
 
@@ -1698,7 +1780,7 @@ export async function PATCH(request: Request) {
     }
 
     /* =====================================================
-       ADMIN ORDER STATUS
+       ADMIN ORDER STATUS UPDATE
     ===================================================== */
 
     if (!requestedStatus) {
@@ -1714,7 +1796,9 @@ export async function PATCH(request: Request) {
 
     if (
       !isValidStatusTransition(
-        existingOrder.order_status,
+        String(
+          existingOrder.order_status
+        ),
         requestedStatus
       )
     ) {
@@ -1728,10 +1812,8 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const updateData: Record<
-      string,
-      unknown
-    > = {
+    const updateData:
+      Record<string, unknown> = {
       order_status:
         requestedStatus,
 
@@ -1739,7 +1821,9 @@ export async function PATCH(request: Request) {
         new Date().toISOString(),
     };
 
-    if (paymentStatus !== null) {
+    if (
+      paymentStatus !== null
+    ) {
       updateData.payment_status =
         paymentStatus;
     }
@@ -1747,14 +1831,18 @@ export async function PATCH(request: Request) {
     /* ---------------- CANCELLATION ---------------- */
 
     if (
-      requestedStatus === "canceled"
+      requestedStatus ===
+      "canceled"
     ) {
-      const reason = String(
-        body.cancellation_reason ||
-          ""
-      ).trim();
+      const reason =
+        String(
+          body.cancellation_reason ||
+            ""
+        ).trim();
 
-      if (!reason) {
+      if (
+        reason.length < 3
+      ) {
         return NextResponse.json(
           {
             success: false,
@@ -1767,7 +1855,8 @@ export async function PATCH(request: Request) {
 
       const cancellationCharge =
         Number(
-          body.cancellation_charge ?? 0
+          body.cancellation_charge ??
+            0
         );
 
       if (
@@ -1786,9 +1875,11 @@ export async function PATCH(request: Request) {
         );
       }
 
-      const orderTotal = Number(
-        existingOrder.total_amount || 0
-      );
+      const orderTotal =
+        Number(
+          existingOrder.total_amount ||
+            0
+        );
 
       if (
         cancellationCharge >
@@ -1850,7 +1941,15 @@ export async function PATCH(request: Request) {
       );
     }
 
-    /* ---------------- CUSTOMER EMAIL ---------------- */
+    console.log(
+      "ADMIN UPDATED ORDER:",
+      id,
+      {
+        orderStatus:
+          requestedStatus,
+        paymentStatus,
+      }
+    );
 
     const customerEmail =
       String(
@@ -1866,11 +1965,16 @@ export async function PATCH(request: Request) {
           "Customer"
       );
 
+    /* =====================================================
+       CUSTOMER EMAIL
+    ===================================================== */
+
     if (customerEmail) {
       let extraHtml = "";
 
       if (
-        requestedStatus === "canceled"
+        requestedStatus ===
+        "canceled"
       ) {
         extraHtml = `
           <p>
@@ -1884,8 +1988,11 @@ export async function PATCH(request: Request) {
           <p>
             <strong>Cancellation Charge:</strong>
             ₹${Number(
-              updatedOrder.cancellation_charge || 0
-            ).toLocaleString("en-IN")}
+              updatedOrder.cancellation_charge ||
+                0
+            ).toLocaleString(
+              "en-IN"
+            )}
           </p>
         `;
       } else {
@@ -1893,6 +2000,15 @@ export async function PATCH(request: Request) {
           <p>
             Your order status has been updated by
             <strong>Dayal Kitchen Ware</strong>.
+          </p>
+
+          <p>
+            <strong>New Order Status:</strong>
+            ${escapeHtml(
+              formatStatus(
+                requestedStatus
+              )
+            )}
           </p>
         `;
       }
@@ -1902,58 +2018,106 @@ export async function PATCH(request: Request) {
 
         subject:
           `Order #${shortOrderId(
-            String(id)
+            id
           )} - ${
-            requestedStatus === "canceled"
+            requestedStatus ===
+            "canceled"
               ? "Order Canceled"
               : "Status Updated"
           }`,
 
-        html: orderEmailHtml(
-          updatedOrder,
+        html:
+          orderEmailHtml(
+            updatedOrder,
 
-          requestedStatus === "canceled"
-            ? "Order Canceled"
-            : "Order Status Updated",
+            requestedStatus ===
+              "canceled"
+              ? "Order Canceled"
+              : "Order Status Updated",
 
-          extraHtml
-        ),
+            extraHtml
+          ),
       });
     }
 
-    /* ---------------- WHATSAPP ORDER UPDATE ---------------- */
+    /* =====================================================
+       WHATSAPP ORDER STATUS UPDATE
+    ===================================================== */
 
     await sendWhatsAppUpdate({
-      phone: String(
-        existingOrder.customer_phone ||
-          ""
-      ),
+      phone:
+        String(
+          existingOrder.customer_phone ||
+            ""
+        ),
 
       customerName,
 
       orderId:
-        String(existingOrder.id),
+        String(
+          existingOrder.id
+        ),
 
       status:
         requestedStatus,
     });
 
-    /* ---------------- PAYMENT UPDATE TOO ---------------- */
+    /* =====================================================
+       PAYMENT STATUS UPDATE
+    ===================================================== */
 
-    if (paymentStatus !== null) {
+    if (
+      paymentStatus !== null
+    ) {
       await sendWhatsAppPaymentUpdate({
-        phone: String(
-          existingOrder.customer_phone ||
-            ""
-        ),
+        phone:
+          String(
+            existingOrder.customer_phone ||
+              ""
+          ),
 
         customerName,
 
         orderId:
-          String(existingOrder.id),
+          String(
+            existingOrder.id
+          ),
 
         paymentStatus,
       });
+
+      if (
+        customerEmail
+      ) {
+        await sendEmailNotification({
+          to: customerEmail,
+
+          subject:
+            `Order #${shortOrderId(
+              id
+            )} - Payment Status Updated`,
+
+          html:
+            orderEmailHtml(
+              updatedOrder,
+              "Payment Status Updated",
+              `
+                <p>
+                  Your payment status has also been updated.
+                </p>
+
+                <p>
+                  <strong>Payment Status:</strong>
+                  ${escapeHtml(
+                    formatPaymentStatus(
+                      paymentStatus
+                    )
+                  )}
+                </p>
+              `
+            ),
+        });
+      }
     }
 
     return NextResponse.json({
