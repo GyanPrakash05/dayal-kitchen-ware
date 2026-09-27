@@ -22,31 +22,31 @@ type UserData = {
 };
 
 type OrderItem = {
-  id?: string | number | null;
-  name?: string;
-  price?: number | string;
-  quantity?: number | string;
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
   image?: string | null;
 };
 
 type Order = {
   id: string;
-  customer_name?: string | null;
-  customer_email?: string | null;
-  customer_phone?: string | null;
-  delivery_address?: string | null;
-  city?: string | null;
-  pincode?: string | null;
-  items?: OrderItem[] | null;
-  subtotal?: number | string | null;
-  delivery_charge?: number | string | null;
-  cancellation_charge?: number | string | null;
-  total_amount?: number | string | null;
-  payment_status?: string | null;
-  order_status?: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  delivery_address: string;
+  city: string;
+  pincode: string;
+  items: OrderItem[];
+  subtotal: number;
+  delivery_charge: number;
+  cancellation_charge: number;
+  total_amount: number;
+  payment_status: string;
+  order_status: string;
   cancellation_reason?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 const statusLabels: Record<string, string> = {
@@ -64,187 +64,237 @@ const paymentLabels: Record<string, string> = {
   refunded: "Refunded",
 };
 
-function getStatusClasses(status?: string | null) {
+function getStatusClasses(status: string) {
   switch (status) {
     case "confirmed":
-      return "border-blue-200 bg-blue-50 text-blue-700";
-
+      return "bg-blue-50 text-blue-700 border-blue-200";
     case "out_for_delivery":
-      return "border-purple-200 bg-purple-50 text-purple-700";
-
+      return "bg-orange-50 text-orange-700 border-orange-200";
     case "delivered":
-      return "border-green-200 bg-green-50 text-green-700";
-
+      return "bg-green-50 text-green-700 border-green-200";
     case "canceled":
-      return "border-red-200 bg-red-50 text-red-700";
-
-    case "pending":
+      return "bg-red-50 text-red-700 border-red-200";
     default:
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "bg-yellow-50 text-yellow-700 border-yellow-200";
   }
 }
 
-function getStatusIcon(status?: string | null) {
+function getPaymentClasses(status: string) {
+  switch (status) {
+    case "paid":
+      return "bg-green-50 text-green-700 border-green-200";
+    case "failed":
+      return "bg-red-50 text-red-700 border-red-200";
+    case "refunded":
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    default:
+      return "bg-yellow-50 text-yellow-700 border-yellow-200";
+  }
+}
+
+function getStatusIcon(status: string) {
   switch (status) {
     case "confirmed":
       return "✓";
-
     case "out_for_delivery":
       return "🚚";
-
     case "delivered":
       return "✓";
-
     case "canceled":
-      return "✕";
-
-    case "pending":
+      return "×";
     default:
       return "⏳";
   }
 }
 
-function formatStatus(status?: string | null) {
-  if (!status) {
-    return "Pending";
-  }
-
+function formatStatus(status: string) {
   return (
     statusLabels[status] ||
-    status
-      .replaceAll("_", " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase())
+    status.replaceAll("_", " ")
   );
 }
 
-function formatPaymentStatus(status?: string | null) {
-  if (!status) {
-    return "Payment Pending";
+function getOrderHeading(status: string) {
+  switch (status) {
+    case "pending":
+      return "Order Placed";
+    case "confirmed":
+      return "Order Confirmed";
+    case "out_for_delivery":
+      return "Out for Delivery";
+    case "delivered":
+      return "Order Delivered";
+    case "canceled":
+      return "Order Canceled";
+    default:
+      return "Order Update";
   }
+}
 
+function formatPaymentStatus(status: string) {
   return (
     paymentLabels[status] ||
-    status
-      .replaceAll("_", " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase())
+    status.replaceAll("_", " ")
   );
 }
 
-function formatDate(date?: string | null) {
-  if (!date) {
-    return "";
-  }
-
-  try {
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "numeric",
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
       month: "short",
       year: "numeric",
-    });
-  } catch {
-    return "";
-  }
+    }
+  );
 }
 
-function formatDateTime(date?: string | null) {
-  if (!date) {
-    return "";
-  }
-
-  try {
-    return new Date(date).toLocaleString("en-IN", {
-      day: "numeric",
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleString(
+    "en-IN",
+    {
+      day: "2-digit",
       month: "short",
       year: "numeric",
-      hour: "numeric",
+      hour: "2-digit",
       minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
+    }
+  );
 }
 
-function formatPrice(value?: number | string | null) {
-  const number = Number(value || 0);
+function formatPrice(value: number) {
+  return `₹${Number(value || 0).toLocaleString(
+    "en-IN"
+  )}`;
+}
 
-  return number.toLocaleString("en-IN");
+function cleanPhone(phone: string) {
+  return String(phone || "").replace(
+    /\D/g,
+    ""
+  );
 }
 
 function AccountContent() {
   const searchParams = useSearchParams();
 
-  const highlightedOrderId = searchParams.get("order");
+  const highlightedOrderId =
+    searchParams.get("order");
 
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] =
+    useState<UserData | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [phone, setPhone] = useState("");
-  const [savingPhone, setSavingPhone] = useState(false);
+  const [orders, setOrders] =
+    useState<Order[]>([]);
 
-  const [addressEditing, setAddressEditing] = useState(false);
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [savingAddress, setSavingAddress] = useState(false);
+  const [loadingOrders, setLoadingOrders] =
+    useState(false);
 
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [refreshingOrders, setRefreshingOrders] =
+    useState(false);
 
-  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
-  const [whatsappLoading, setWhatsappLoading] = useState(true);
-  const [whatsappSaving, setWhatsappSaving] = useState(false);
+  const [phone, setPhone] =
+    useState("");
+
+  const [savingPhone, setSavingPhone] =
+    useState(false);
+
+  const [addressEditing, setAddressEditing] =
+    useState(false);
+
+  const [address, setAddress] =
+    useState("");
+
+  const [city, setCity] =
+    useState("");
+
+  const [pincode, setPincode] =
+    useState("");
+
+  const [savingAddress, setSavingAddress] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const [whatsappEnabled, setWhatsappEnabled] =
+    useState(false);
+
+  const [whatsappLoading, setWhatsappLoading] =
+    useState(false);
+
+  const [whatsappSaving, setWhatsappSaving] =
+    useState(false);
 
   const [expandedOrderId, setExpandedOrderId] =
-    useState<string | null>(highlightedOrderId);
+    useState<string | null>(
+      highlightedOrderId
+    );
 
-  const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
-  const [cancelReason, setCancelReason] = useState("");
-  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelOrder, setCancelOrder] =
+    useState<Order | null>(null);
 
-  /*
-   * =========================================================
-   * LOAD ORDERS
-   * =========================================================
-   */
+  const [cancelReason, setCancelReason] =
+    useState("");
 
-  const loadOrders = useCallback(async () => {
-    try {
-      setLoadingOrders(true);
+  const [cancelLoading, setCancelLoading] =
+    useState(false);
 
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        console.error("SESSION ERROR:", sessionError);
-        setLoadingOrders(false);
-        return;
-      }
-
-      const response = await fetch("/api/orders", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        cache: "no-store",
-      });
-
-      let result: any = null;
-
+  const loadOrders = useCallback(
+    async (
+      showRefreshing = false
+    ) => {
       try {
-        result = await response.json();
-      } catch {
-        result = null;
-      }
+        if (showRefreshing) {
+          setRefreshingOrders(true);
+        } else {
+          setLoadingOrders(true);
+        }
 
-      if (response.ok && result?.success) {
-        const fetchedOrders = Array.isArray(result.orders)
-          ? result.orders
-          : [];
+        setError("");
+
+        const {
+          data: {
+            session,
+          },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          setOrders([]);
+          return;
+        }
+
+        const response =
+          await fetch("/api/orders", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              "Cache-Control":
+                "no-cache",
+            },
+            cache: "no-store",
+          });
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+              "Failed to load orders."
+          );
+        }
+
+        const fetchedOrders =
+          Array.isArray(result.orders)
+            ? result.orders
+            : [];
 
         setOrders(fetchedOrders);
 
@@ -252,412 +302,465 @@ function AccountContent() {
           highlightedOrderId &&
           fetchedOrders.some(
             (order: Order) =>
-              String(order.id) === String(highlightedOrderId)
+              order.id ===
+              highlightedOrderId
           )
         ) {
-          setExpandedOrderId(highlightedOrderId);
+          setExpandedOrderId(
+            highlightedOrderId
+          );
         }
-      } else {
-        console.error("ORDERS FETCH ERROR:", result);
+      } catch (err) {
+        console.error(
+          "LOAD ORDERS ERROR:",
+          err
+        );
 
         setError(
-          result?.error ||
-            result?.message ||
-            "Unable to load your orders."
+          err instanceof Error
+            ? err.message
+            : "Failed to load orders."
         );
+      } finally {
+        setLoadingOrders(false);
+        setRefreshingOrders(false);
       }
-    } catch (error) {
-      console.error("LOAD ORDERS ERROR:", error);
+    },
+    [highlightedOrderId]
+  );
 
-      setError("Unable to load your orders. Please try again.");
-    } finally {
-      setLoadingOrders(false);
-    }
-  }, [highlightedOrderId]);
-
-  /*
-   * =========================================================
-   * LOAD USER + SETTINGS
-   * =========================================================
-   */
-
-  useEffect(() => {
-    async function loadAccount() {
+  const loadAccount =
+    useCallback(async () => {
       try {
         setLoading(true);
-        setWhatsappLoading(true);
+        setError("");
 
         const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          data: {
+            user: authUser,
+          },
+        } =
+          await supabase.auth.getUser();
 
-        if (userError || !user) {
-          window.location.href = "/login?redirect=/account";
+        if (!authUser) {
+          setUser(null);
           return;
         }
 
-        const metadata = user.user_metadata || {};
-
-        const fullName =
-          metadata.full_name ||
-          metadata.name ||
-          user.email?.split("@")[0] ||
-          "Customer";
-
-        const savedPhone = metadata.phone || user.phone || "";
-
-        const provider = user.app_metadata?.provider || "email";
-
-        const savedAddress = metadata.address || "";
-        const savedCity = metadata.city || "";
-        const savedPincode = metadata.pincode || "";
-
-        const cleanPhone = String(savedPhone).replace(/\D/g, "");
+        const metadata =
+          authUser.user_metadata || {};
 
         const accountUser: UserData = {
-          id: user.id,
-          email: user.email || "",
-          full_name: fullName,
-          phone: cleanPhone,
-          provider,
-          address: String(savedAddress),
-          city: String(savedCity),
-          pincode: String(savedPincode),
+          id: authUser.id,
+          email:
+            authUser.email || "",
+          full_name:
+            metadata.full_name ||
+            metadata.name ||
+            "",
+          phone:
+            metadata.phone || "",
+          provider:
+            authUser.app_metadata
+              ?.provider || "email",
+          address:
+            metadata.address || "",
+          city:
+            metadata.city || "",
+          pincode:
+            metadata.pincode || "",
         };
 
         setUser(accountUser);
-        setPhone(cleanPhone);
-        setAddress(String(savedAddress));
-        setCity(String(savedCity));
-        setPincode(String(savedPincode));
+        setPhone(accountUser.phone);
+        setAddress(accountUser.address);
+        setCity(accountUser.city);
+        setPincode(accountUser.pincode);
 
-        /*
-         * =====================================================
-         * WHATSAPP PHONE SYNC
-         * =====================================================
-         */
+        /* ---------------- WHATSAPP SETTINGS ---------------- */
 
-        const { error: whatsappSyncError } = await supabase
-          .from("customer_whatsapp_settings")
-          .upsert(
-            {
-              id: user.id,
-              phone: cleanPhone,
-              updated_at: new Date().toISOString(),
-            },
-            {
-              onConflict: "id",
-            }
+        setWhatsappLoading(true);
+
+        try {
+          const cleanUserPhone =
+            cleanPhone(
+              accountUser.phone
+            );
+
+          if (cleanUserPhone) {
+            await supabase
+              .from(
+                "customer_whatsapp_settings"
+              )
+              .upsert(
+                {
+                  id: authUser.id,
+                  phone:
+                    cleanUserPhone,
+                  updated_at:
+                    new Date().toISOString(),
+                },
+                {
+                  onConflict: "id",
+                }
+              );
+          }
+
+          const {
+            data: whatsappSettings,
+          } =
+            await supabase
+              .from(
+                "customer_whatsapp_settings"
+              )
+              .select(
+                "phone, enabled, verified"
+              )
+              .eq(
+                "id",
+                authUser.id
+              )
+              .maybeSingle();
+
+          setWhatsappEnabled(
+            Boolean(
+              whatsappSettings?.enabled
+            )
           );
-
-        if (whatsappSyncError) {
+        } catch (whatsappError) {
           console.error(
-            "WHATSAPP PHONE SYNC ERROR:",
-            whatsappSyncError
+            "WHATSAPP SETTINGS ERROR:",
+            whatsappError
           );
+        } finally {
+          setWhatsappLoading(false);
         }
-
-        /*
-         * =====================================================
-         * LOAD WHATSAPP SETTINGS
-         * =====================================================
-         */
-
-        const {
-          data: whatsappSettings,
-          error: whatsappSettingsError,
-        } = await supabase
-          .from("customer_whatsapp_settings")
-          .select("phone, enabled, verified")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (whatsappSettingsError) {
-          console.error(
-            "WHATSAPP SETTINGS LOAD ERROR:",
-            whatsappSettingsError
-          );
-
-          setWhatsappEnabled(false);
-        } else if (whatsappSettings) {
-          setWhatsappEnabled(Boolean(whatsappSettings.enabled));
-        } else {
-          setWhatsappEnabled(false);
-        }
-
-        setWhatsappLoading(false);
 
         await loadOrders();
-
-        setLoading(false);
-      } catch (error) {
-        console.error("ACCOUNT LOAD ERROR:", error);
-
-        setWhatsappLoading(false);
-        setLoadingOrders(false);
-        setLoading(false);
-      }
-    }
-
-    loadAccount();
-  }, [loadOrders]);
-
-  /*
-   * =========================================================
-   * SAVE PHONE
-   * =========================================================
-   */
-
-  async function handleSavePhone() {
-    setError("");
-    setMessage("");
-
-    const cleanPhone = phone.replace(/\D/g, "");
-
-    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
-      setError(
-        "Please enter a valid 10-digit Indian mobile number."
-      );
-      return;
-    }
-
-    setSavingPhone(true);
-
-    try {
-      const { data, error } = await supabase.auth.updateUser({
-        data: {
-          phone: cleanPhone,
-        },
-      });
-
-      if (error) {
-        console.error("PHONE UPDATE ERROR:", error);
-
-        setError(
-          error.message ||
-            "Unable to save your mobile number. Please try again."
+      } catch (err) {
+        console.error(
+          "LOAD ACCOUNT ERROR:",
+          err
         );
 
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load account."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, [loadOrders]);
+
+  useEffect(() => {
+    loadAccount();
+  }, [loadAccount]);
+
+  const handleSavePhone =
+    async () => {
+      setError("");
+      setMessage("");
+
+      const clean =
+        cleanPhone(phone);
+
+      if (
+        !/^[6-9]\d{9}$/.test(
+          clean
+        )
+      ) {
+        setError(
+          "Please enter a valid 10-digit Indian mobile number."
+        );
         return;
       }
 
-      if (data.user) {
-        setUser((current) =>
-          current
-            ? {
-                ...current,
-                phone: cleanPhone,
-              }
-            : current
-        );
-      }
+      try {
+        setSavingPhone(true);
 
-      setPhone(cleanPhone);
+        const {
+          data: {
+            user: authUser,
+          },
+        } =
+          await supabase.auth.getUser();
 
-      if (user) {
-        const { error: whatsappSyncError } = await supabase
-          .from("customer_whatsapp_settings")
-          .upsert(
+        if (!authUser) {
+          throw new Error(
+            "Please login again."
+          );
+        }
+
+        const { error: updateError } =
+          await supabase.auth.updateUser(
             {
-              id: user.id,
-              phone: cleanPhone,
-              updated_at: new Date().toISOString(),
-            },
-            {
-              onConflict: "id",
+              data: {
+                ...authUser.user_metadata,
+                phone: clean,
+              },
             }
           );
 
-        if (whatsappSyncError) {
+        if (updateError) {
+          throw updateError;
+        }
+
+        const {
+          error: whatsappError,
+        } =
+          await supabase
+            .from(
+              "customer_whatsapp_settings"
+            )
+            .upsert(
+              {
+                id: authUser.id,
+                phone: clean,
+                updated_at:
+                  new Date().toISOString(),
+              },
+              {
+                onConflict: "id",
+              }
+            );
+
+        if (whatsappError) {
           console.error(
-            "WHATSAPP PHONE UPDATE ERROR:",
-            whatsappSyncError
+            "WHATSAPP PHONE SYNC ERROR:",
+            whatsappError
           );
         }
-      }
 
-      setMessage("Mobile number saved successfully.");
-    } catch (error) {
-      console.error("PHONE SAVE ERROR:", error);
+        setPhone(clean);
 
-      setError(
-        "Unable to save your mobile number. Please try again."
-      );
-    } finally {
-      setSavingPhone(false);
-    }
-  }
-
-  /*
-   * =========================================================
-   * SAVE ADDRESS
-   * =========================================================
-   */
-
-  async function handleSaveAddress() {
-    setError("");
-    setMessage("");
-
-    const cleanAddress = address.trim();
-    const cleanCity = city.trim();
-    const cleanPincode = pincode.trim();
-
-    if (!cleanAddress) {
-      setError("Please enter your delivery address.");
-      return;
-    }
-
-    if (!cleanCity) {
-      setError("Please enter your city.");
-      return;
-    }
-
-    if (!/^\d{6}$/.test(cleanPincode)) {
-      setError("Please enter a valid 6-digit pincode.");
-      return;
-    }
-
-    setSavingAddress(true);
-
-    try {
-      const { data, error } = await supabase.auth.updateUser({
-        data: {
-          address: cleanAddress,
-          city: cleanCity,
-          pincode: cleanPincode,
-        },
-      });
-
-      if (error) {
-        console.error("ADDRESS UPDATE ERROR:", error);
-
-        setError(
-          error.message ||
-            "Unable to save your address. Please try again."
-        );
-
-        return;
-      }
-
-      if (data.user) {
         setUser((current) =>
           current
             ? {
                 ...current,
-                address: cleanAddress,
-                city: cleanCity,
-                pincode: cleanPincode,
+                phone: clean,
               }
             : current
         );
-      }
 
-      setAddress(cleanAddress);
-      setCity(cleanCity);
-      setPincode(cleanPincode);
-
-      setAddressEditing(false);
-
-      setMessage("Delivery address saved successfully.");
-    } catch (error) {
-      console.error("ADDRESS SAVE ERROR:", error);
-
-      setError(
-        "Unable to save your address. Please try again."
-      );
-    } finally {
-      setSavingAddress(false);
-    }
-  }
-
-  /*
-   * =========================================================
-   * WHATSAPP TOGGLE
-   * =========================================================
-   */
-
-  async function handleWhatsappToggle() {
-    if (!user) {
-      return;
-    }
-
-    setError("");
-    setMessage("");
-    setWhatsappSaving(true);
-
-    try {
-      if (!user.phone) {
-        setError("Please add your mobile number first.");
-        return;
-      }
-
-      const newStatus = !whatsappEnabled;
-
-      const { error: whatsappError } = await supabase
-        .from("customer_whatsapp_settings")
-        .upsert(
-          {
-            id: user.id,
-            phone: user.phone,
-            enabled: newStatus,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "id",
-          }
+        setMessage(
+          "Phone number updated successfully."
         );
-
-      if (whatsappError) {
+      } catch (err) {
         console.error(
-          "WHATSAPP UPDATE ERROR:",
-          whatsappError
+          "SAVE PHONE ERROR:",
+          err
         );
 
         setError(
-          "Unable to update WhatsApp settings. Please try again."
+          err instanceof Error
+            ? err.message
+            : "Failed to update phone number."
         );
+      } finally {
+        setSavingPhone(false);
+      }
+    };
 
+  const handleSaveAddress =
+    async () => {
+      setError("");
+      setMessage("");
+
+      if (!address.trim()) {
+        setError(
+          "Address is required."
+        );
         return;
       }
 
-      setWhatsappEnabled(newStatus);
+      if (!city.trim()) {
+        setError(
+          "City is required."
+        );
+        return;
+      }
 
-      setMessage(
-        newStatus
-          ? "WhatsApp updates enabled successfully."
-          : "WhatsApp updates disabled successfully."
-      );
-    } catch (error) {
-      console.error("WHATSAPP TOGGLE ERROR:", error);
+      if (
+        !/^\d{6}$/.test(
+          pincode.trim()
+        )
+      ) {
+        setError(
+          "Please enter a valid 6-digit pincode."
+        );
+        return;
+      }
 
-      setError(
-        "Unable to update WhatsApp settings. Please try again."
-      );
-    } finally {
-      setWhatsappSaving(false);
-    }
-  }
+      try {
+        setSavingAddress(true);
 
-  /*
-   * =========================================================
-   * CUSTOMER CANCEL ORDER
-   * =========================================================
-   *
-   * Customer can cancel only:
-   *
-   * pending
-   * confirmed
-   *
-   * Customer cancellation charge = ₹0
-   *
-   * Admin can separately apply a cancellation charge.
-   */
+        const {
+          data: {
+            user: authUser,
+          },
+        } =
+          await supabase.auth.getUser();
 
-  function openCancelModal(order: Order) {
+        if (!authUser) {
+          throw new Error(
+            "Please login again."
+          );
+        }
+
+        const { error: updateError } =
+          await supabase.auth.updateUser(
+            {
+              data: {
+                ...authUser.user_metadata,
+                address:
+                  address.trim(),
+                city: city.trim(),
+                pincode:
+                  pincode.trim(),
+              },
+            }
+          );
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        setUser((current) =>
+          current
+            ? {
+                ...current,
+                address:
+                  address.trim(),
+                city: city.trim(),
+                pincode:
+                  pincode.trim(),
+              }
+            : current
+        );
+
+        setAddressEditing(false);
+
+        setMessage(
+          "Delivery address updated successfully."
+        );
+      } catch (err) {
+        console.error(
+          "SAVE ADDRESS ERROR:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to update address."
+        );
+      } finally {
+        setSavingAddress(false);
+      }
+    };
+
+  const handleWhatsappToggle =
+    async () => {
+      setError("");
+      setMessage("");
+
+      try {
+        setWhatsappSaving(true);
+
+        const {
+          data: {
+            user: authUser,
+          },
+        } =
+          await supabase.auth.getUser();
+
+        if (!authUser) {
+          throw new Error(
+            "Please login again."
+          );
+        }
+
+        const nextValue =
+          !whatsappEnabled;
+
+        const clean =
+          cleanPhone(phone);
+
+        if (
+          nextValue &&
+          !/^[6-9]\d{9}$/.test(
+            clean
+          )
+        ) {
+          throw new Error(
+            "Please save a valid phone number before enabling WhatsApp notifications."
+          );
+        }
+
+        const {
+          error: updateError,
+        } =
+          await supabase
+            .from(
+              "customer_whatsapp_settings"
+            )
+            .upsert(
+              {
+                id: authUser.id,
+                phone: clean,
+                enabled:
+                  nextValue,
+                updated_at:
+                  new Date().toISOString(),
+              },
+              {
+                onConflict: "id",
+              }
+            );
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        setWhatsappEnabled(
+          nextValue
+        );
+
+        setMessage(
+          nextValue
+            ? "WhatsApp notifications enabled."
+            : "WhatsApp notifications disabled."
+        );
+      } catch (err) {
+        console.error(
+          "WHATSAPP TOGGLE ERROR:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to update WhatsApp settings."
+        );
+      } finally {
+        setWhatsappSaving(false);
+      }
+    };
+
+  const openCancelModal = (
+    order: Order
+  ) => {
+    const status =
+      String(
+        order.order_status
+      ).toLowerCase();
+
     if (
-      order.order_status !== "pending" &&
-      order.order_status !== "confirmed"
+      ![
+        "pending",
+        "confirmed",
+      ].includes(status)
     ) {
       setError(
         "This order can no longer be canceled."
@@ -669,157 +772,158 @@ function AccountContent() {
     setMessage("");
     setCancelReason("");
     setCancelOrder(order);
-  }
+  };
 
-  function closeCancelModal() {
-    if (cancelLoading) {
-      return;
-    }
-
-    setCancelOrder(null);
-    setCancelReason("");
-  }
-
-  async function handleCustomerCancelOrder() {
-    if (!cancelOrder) {
-      return;
-    }
-
-    const reason = cancelReason.trim();
-
-    if (!reason) {
-      setError("Please enter a cancellation reason.");
-      return;
-    }
-
-    if (reason.length < 3) {
-      setError(
-        "Please enter a valid cancellation reason."
-      );
-      return;
-    }
-
-    setError("");
-    setMessage("");
-    setCancelLoading(true);
-
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        setError(
-          "Your session has expired. Please login again."
-        );
+  const closeCancelModal =
+    () => {
+      if (cancelLoading) {
         return;
       }
-
-      const response = await fetch("/api/orders", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          id: cancelOrder.id,
-          order_status: "canceled",
-          cancellation_reason: reason,
-          cancellation_charge: 0,
-        }),
-      });
-
-      let result: any = null;
-
-      try {
-        result = await response.json();
-      } catch {
-        result = null;
-      }
-
-      if (!response.ok || !result?.success) {
-        console.error(
-          "CUSTOMER CANCEL ERROR:",
-          result
-        );
-
-        setError(
-          result?.error ||
-            result?.message ||
-            "Unable to cancel this order."
-        );
-
-        return;
-      }
-
-      const updatedOrder: Order =
-        result.order || {
-          ...cancelOrder,
-          order_status: "canceled",
-          cancellation_reason: reason,
-          cancellation_charge: 0,
-        };
-
-      setOrders((currentOrders) =>
-        currentOrders.map((order) =>
-          String(order.id) === String(cancelOrder.id)
-            ? {
-                ...order,
-                ...updatedOrder,
-              }
-            : order
-        )
-      );
 
       setCancelOrder(null);
       setCancelReason("");
+    };
 
-      setExpandedOrderId(String(cancelOrder.id));
+  const handleCustomerCancelOrder =
+    async () => {
+      if (!cancelOrder) {
+        return;
+      }
 
-      setMessage(
-        "Your order has been canceled successfully."
-      );
-    } catch (error) {
-      console.error(
-        "CUSTOMER CANCEL REQUEST ERROR:",
-        error
-      );
+      const reason =
+        cancelReason.trim();
 
-      setError(
-        "Unable to cancel the order. Please try again."
-      );
-    } finally {
-      setCancelLoading(false);
-    }
-  }
+      if (reason.length < 3) {
+        setError(
+          "Please enter a valid cancellation reason."
+        );
+        return;
+      }
 
-  /*
-   * =========================================================
-   * LOGOUT
-   * =========================================================
-   */
+      try {
+        setCancelLoading(true);
+        setError("");
+        setMessage("");
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
+        const {
+          data: {
+            session,
+          },
+        } =
+          await supabase.auth.getSession();
 
-    window.location.href = "/";
-  }
+        if (!session) {
+          throw new Error(
+            "Your session has expired. Please login again."
+          );
+        }
 
-  /*
-   * =========================================================
-   * LOADING
-   * =========================================================
-   */
+        const response =
+          await fetch(
+            "/api/orders",
+            {
+              method: "PATCH",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                id: cancelOrder.id,
+                order_status:
+                  "canceled",
+                cancellation_reason:
+                  reason,
+                cancellation_charge:
+                  0,
+              }),
+            }
+          );
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+              "Failed to cancel order."
+          );
+        }
+
+        if (!result.success) {
+          throw new Error(
+            result.error ||
+              "Failed to cancel order."
+          );
+        }
+
+        const updatedOrder =
+          result.order;
+
+        setOrders((currentOrders) =>
+          currentOrders.map(
+            (order) =>
+              order.id ===
+              cancelOrder.id
+                ? {
+                    ...order,
+                    ...(updatedOrder ||
+                      {}),
+                    order_status:
+                      "canceled",
+                    cancellation_reason:
+                      reason,
+                    cancellation_charge:
+                      0,
+                  }
+                : order
+          )
+        );
+
+        setExpandedOrderId(
+          cancelOrder.id
+        );
+
+        setCancelOrder(null);
+        setCancelReason("");
+
+        setMessage(
+          "Order canceled successfully. You will receive the order update by email and WhatsApp if WhatsApp notifications are enabled."
+        );
+
+        /*
+         * Refresh from database so the UI
+         * always shows the latest order state.
+         */
+        await loadOrders(true);
+      } catch (err) {
+        console.error(
+          "CUSTOMER CANCEL ERROR:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to cancel order."
+        );
+      } finally {
+        setCancelLoading(false);
+      }
+    };
+
+  const canCustomerCancel =
+    (status: string) =>
+      status === "pending" ||
+      status === "confirmed";
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#faf9f6]">
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
-
-          <p className="mt-4 text-sm text-zinc-500">
-            Loading account...
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
+          <p className="text-gray-600">
+            Loading your account...
           </p>
         </div>
       </main>
@@ -827,592 +931,651 @@ function AccountContent() {
   }
 
   if (!user) {
-    return null;
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Please Login
+          </h1>
+
+          <p className="mt-2 text-gray-600">
+            Login to view your account and orders.
+          </p>
+
+          <Link
+            href="/login"
+            className="mt-6 inline-flex rounded-xl bg-black px-6 py-3 font-semibold text-white transition hover:bg-gray-800"
+          >
+            Login
+          </Link>
+        </div>
+      </main>
+    );
   }
 
-  const phoneMissing = !user.phone;
-
-  const addressMissing =
-    !user.address ||
-    !user.city ||
-    !user.pincode;
-
   return (
-    <main className="min-h-screen bg-[#faf9f6] px-4 py-10 text-zinc-900 sm:px-6 sm:py-12">
-      <div className="mx-auto max-w-5xl">
-
+    <main className="min-h-screen bg-gray-50">
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {/* HEADER */}
 
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link
-              href="/"
-              className="text-sm font-semibold text-zinc-500 transition hover:text-[#5c4033]"
-            >
-              ← Back to Store
-            </Link>
-
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#5c4033] sm:text-4xl">
+            <h1 className="text-3xl font-bold text-gray-900">
               My Account
             </h1>
 
-            <p className="mt-2 text-sm text-zinc-500">
-              Manage your account, orders and delivery details.
+            <p className="mt-1 text-gray-600">
+              Welcome back,{" "}
+              {user.full_name ||
+                "Customer"}
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="w-fit rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+          <Link
+            href="/"
+            className="inline-flex w-fit rounded-xl border border-gray-300 bg-white px-5 py-3 font-semibold text-gray-800 transition hover:bg-gray-100"
           >
-            Logout
-          </button>
+            Continue Shopping
+          </Link>
         </div>
 
-        {/* GLOBAL MESSAGE */}
+        {/* ALERTS */}
 
-        {message && (
-          <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-            {message}
-          </div>
-        )}
-
-        {error && !phoneMissing && !addressEditing && !cancelOrder && (
-          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        {/* PROFILE */}
-
-        <section className="mt-8 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-2xl font-bold text-white">
-              {user.full_name.charAt(0).toUpperCase()}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl font-bold text-zinc-900">
-                  {user.full_name}
-                </h2>
-
-                {user.provider === "google" && (
-                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                    Google Account
-                  </span>
-                )}
-              </div>
-
-              <p className="mt-1 break-all text-sm text-zinc-500">
-                {user.email}
-              </p>
-            </div>
+        {message && (
+          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {message}
           </div>
+        )}
 
-          <div className="mt-7 grid gap-4 border-t border-zinc-100 pt-6 sm:grid-cols-2">
-            <div className="rounded-2xl bg-[#faf9f6] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                Email
-              </p>
+        {/* ACCOUNT DETAILS */}
 
-              <p className="mt-2 break-all text-sm font-semibold text-zinc-900">
-                {user.email}
-              </p>
-            </div>
+        <section className="mb-8 grid gap-6 lg:grid-cols-2">
+          {/* PROFILE */}
 
-            <div className="rounded-2xl bg-[#faf9f6] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                Mobile Number
-              </p>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900">
+              Profile
+            </h2>
 
-              {user.phone ? (
-                <p className="mt-2 text-sm font-semibold text-zinc-900">
-                  +91 {user.phone}
+            <div className="mt-5 space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Name
                 </p>
-              ) : (
-                <p className="mt-2 text-sm font-semibold text-amber-700">
-                  Not added
+                <p className="mt-1 text-gray-900">
+                  {user.full_name ||
+                    "Not provided"}
                 </p>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* PHONE */}
-
-        {phoneMissing && (
-          <section className="mt-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-xl">
-                📱
               </div>
 
               <div>
-                <h2 className="text-lg font-bold">
-                  Complete Your Profile
-                </h2>
-
-                <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Add your mobile number so we can contact you about your orders and delivery.
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Email
+                </p>
+                <p className="mt-1 break-all text-gray-900">
+                  {user.email}
                 </p>
               </div>
-            </div>
 
-            <div className="mt-6">
-              <label
-                htmlFor="phone"
-                className="mb-2 block text-sm font-bold text-zinc-900"
-              >
-                Mobile Number
-              </label>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Phone
+                </p>
 
-              <div className="flex">
-                <div className="flex items-center rounded-l-xl border border-r-0 border-zinc-300 bg-zinc-50 px-4 text-sm font-medium text-zinc-700">
-                  +91
-                </div>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(event) =>
+                      setPhone(
+                        event.target.value
+                      )
+                    }
+                    maxLength={10}
+                    placeholder="10-digit mobile number"
+                    className="min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                  />
 
-                <input
-                  id="phone"
-                  type="tel"
-                  inputMode="numeric"
-                  value={phone}
-                  onChange={(e) =>
-                    setPhone(
-                      e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 10)
-                    )
-                  }
-                  placeholder="10-digit mobile number"
-                  maxLength={10}
-                  className="w-full rounded-r-xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-2 focus:ring-[#eee8dc]"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleSavePhone}
-              disabled={savingPhone}
-              className="mt-5 rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {savingPhone
-                ? "Saving..."
-                : "Save Mobile Number"}
-            </button>
-          </section>
-        )}
-
-        {/* ORDERS */}
-
-        <section className="mt-6 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5efe4] text-xl">
-                  📦
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-bold text-[#5c4033]">
-                    My Orders
-                  </h2>
-
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Track your recent orders and delivery status.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={
+                      handleSavePhone
+                    }
+                    disabled={
+                      savingPhone
+                    }
+                    className="rounded-xl bg-black px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {savingPhone
+                      ? "Saving..."
+                      : "Save"}
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div className="rounded-full bg-[#faf9f6] px-4 py-2 text-xs font-bold text-zinc-600">
-              {orders.length}{" "}
-              {orders.length === 1 ? "Order" : "Orders"}
             </div>
           </div>
 
-          {loadingOrders ? (
-            <div className="mt-7 rounded-2xl bg-[#faf9f6] px-5 py-8 text-center">
-              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
+          {/* ADDRESS */}
 
-              <p className="mt-3 text-sm text-zinc-500">
-                Loading your orders...
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-bold text-gray-900">
+                Delivery Address
+              </h2>
+
+              {!addressEditing && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAddressEditing(
+                      true
+                    )
+                  }
+                  className="text-sm font-semibold text-black underline"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+
+            {addressEditing ? (
+              <div className="mt-5 space-y-3">
+                <textarea
+                  value={address}
+                  onChange={(event) =>
+                    setAddress(
+                      event.target.value
+                    )
+                  }
+                  rows={3}
+                  placeholder="Full delivery address"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                />
+
+                <input
+                  value={city}
+                  onChange={(event) =>
+                    setCity(
+                      event.target.value
+                    )
+                  }
+                  placeholder="City"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                />
+
+                <input
+                  value={pincode}
+                  onChange={(event) =>
+                    setPincode(
+                      event.target.value.replace(
+                        /\D/g,
+                        ""
+                      ).slice(0, 6)
+                    )
+                  }
+                  placeholder="6-digit pincode"
+                  maxLength={6}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={
+                      handleSaveAddress
+                    }
+                    disabled={
+                      savingAddress
+                    }
+                    className="rounded-xl bg-black px-5 py-3 font-semibold text-white disabled:opacity-50"
+                  >
+                    {savingAddress
+                      ? "Saving..."
+                      : "Save Address"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAddressEditing(
+                        false
+                      )
+                    }
+                    disabled={
+                      savingAddress
+                    }
+                    className="rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl bg-gray-50 p-4">
+                {user.address ? (
+                  <>
+                    <p className="text-gray-900">
+                      {user.address}
+                    </p>
+
+                    <p className="mt-1 text-gray-600">
+                      {user.city}
+                      {user.pincode
+                        ? ` - ${user.pincode}`
+                        : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-500">
+                    No delivery address saved.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* WHATSAPP SETTINGS */}
+
+        <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                WhatsApp Order Updates
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-600">
+                Receive order status and payment updates on WhatsApp.
+              </p>
+
+              {phone && (
+                <p className="mt-2 text-sm font-medium text-gray-800">
+                  Number: +91{" "}
+                  {cleanPhone(phone)}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={
+                handleWhatsappToggle
+              }
+              disabled={
+                whatsappLoading ||
+                whatsappSaving
+              }
+              className={`relative h-8 w-14 rounded-full transition ${
+                whatsappEnabled
+                  ? "bg-green-600"
+                  : "bg-gray-300"
+              } ${
+                whatsappLoading ||
+                whatsappSaving
+                  ? "cursor-not-allowed opacity-50"
+                  : ""
+              }`}
+              aria-label="Toggle WhatsApp notifications"
+            >
+              <span
+                className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition ${
+                  whatsappEnabled
+                    ? "left-7"
+                    : "left-1"
+                }`}
+              />
+            </button>
+          </div>
+        </section>
+
+        {/* ORDERS */}
+
+        <section>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                My Orders
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-600">
+                Track your orders and payment status.
               </p>
             </div>
-          ) : orders.length === 0 ? (
-            <div className="mt-7 rounded-2xl border border-dashed border-zinc-200 bg-[#faf9f6] px-5 py-10 text-center">
-              <div className="text-4xl">🛍️</div>
 
-              <h3 className="mt-4 text-base font-bold text-zinc-800">
+            <button
+              type="button"
+              onClick={() =>
+                loadOrders(true)
+              }
+              disabled={
+                loadingOrders ||
+                refreshingOrders
+              }
+              className="inline-flex w-fit items-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {refreshingOrders
+                ? "Refreshing..."
+                : "↻ Refresh Orders"}
+            </button>
+          </div>
+
+          {loadingOrders &&
+          orders.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
+              <p className="text-gray-600">
+                Loading orders...
+              </p>
+            </div>
+          ) : orders.length ===
+            0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+              <div className="text-4xl">
+                🛍️
+              </div>
+
+              <h3 className="mt-4 text-xl font-bold text-gray-900">
                 No orders yet
               </h3>
 
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-500">
-                Your orders will appear here after you place your first order.
+              <p className="mt-2 text-gray-600">
+                Your placed orders will appear here.
               </p>
 
               <Link
-                href="/#products"
-                className="mt-5 inline-block rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+                href="/"
+                className="mt-6 inline-flex rounded-xl bg-black px-6 py-3 font-semibold text-white"
               >
                 Start Shopping
               </Link>
             </div>
           ) : (
-            <div className="mt-7 space-y-4">
-              {orders.map((order) => {
-                const isExpanded =
-                  expandedOrderId === String(order.id);
+            <div className="space-y-4">
+              {orders.map(
+                (order) => {
+                  const status =
+                    String(
+                      order.order_status ||
+                        "pending"
+                    ).toLowerCase();
 
-                const isHighlighted =
-                  highlightedOrderId === String(order.id);
+                  const paymentStatus =
+                    String(
+                      order.payment_status ||
+                        "pending"
+                    ).toLowerCase();
 
-                const items = Array.isArray(order.items)
-                  ? order.items
-                  : [];
+                  const isExpanded =
+                    expandedOrderId ===
+                    order.id;
 
-                const canCustomerCancel =
-                  order.order_status === "pending" ||
-                  order.order_status === "confirmed";
+                  const canCancel =
+                    canCustomerCancel(
+                      status
+                    );
 
-                return (
-                  <div
-                    key={order.id}
-                    className={`overflow-hidden rounded-2xl border transition ${
-                      isHighlighted
-                        ? "border-amber-300 bg-amber-50/30 shadow-md"
-                        : "border-zinc-200 bg-white"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedOrderId(
-                          isExpanded
-                            ? null
-                            : String(order.id)
-                        )
-                      }
-                      className="w-full p-5 text-left"
+                  return (
+                    <div
+                      key={order.id}
+                      className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${
+                        highlightedOrderId ===
+                        order.id
+                          ? "border-black ring-2 ring-black/10"
+                          : "border-gray-200"
+                      }`}
                     >
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-bold text-zinc-900">
-                              Order #
-                              {String(order.id).slice(0, 8)}
-                            </span>
+                      {/* ORDER HEADER */}
 
-                            {isHighlighted && (
-                              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                                Just Placed
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {formatDate(order.created_at)}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-4 sm:justify-end">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${getStatusClasses(
-                              order.order_status
-                            )}`}
+                      <div className="p-5">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedOrderId(
+                                isExpanded
+                                  ? null
+                                  : order.id
+                              )
+                            }
+                            className="min-w-0 flex-1 text-left"
                           >
-                            <span>
-                              {getStatusIcon(
-                                order.order_status
-                              )}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-lg font-bold text-gray-900">
+  Order #
+  {order.id
+    .slice(
+      0,
+      8
+    )
+    .toUpperCase()}{" "}
+  {getOrderHeading(status)}
+</span>
 
-                            {formatStatus(
-                              order.order_status
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                                  status
+                                )}`}
+                              >
+                                <span>
+                                  {getStatusIcon(
+                                    status
+                                  )}
+                                </span>
+
+                                {formatStatus(
+                                  status
+                                )}
+                              </span>
+
+                              <span
+                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getPaymentClasses(
+                                  paymentStatus
+                                )}`}
+                              >
+                                {formatPaymentStatus(
+                                  paymentStatus
+                                )}
+                              </span>
+                            </div>
+
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+                              <span>
+                                {formatDateTime(
+                                  order.created_at
+                                )}
+                              </span>
+
+                              <span>
+                                {order.items?.length ||
+                                  0}{" "}
+                                item
+                                {(order.items
+                                  ?.length ||
+                                  0) !== 1
+                                  ? "s"
+                                  : ""}
+                              </span>
+
+                              <span className="font-semibold text-gray-900">
+                                {formatPrice(
+                                  order.total_amount
+                                )}
+                              </span>
+                            </div>
+                          </button>
+
+                          {/* VISIBLE CANCEL BUTTON */}
+
+                          <div className="flex shrink-0 items-center gap-2">
+                            {canCancel && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openCancelModal(
+                                    order
+                                  )
+                                }
+                                className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-100"
+                              >
+                                Cancel Order
+                              </button>
                             )}
-                          </span>
 
-                          <span className="text-lg font-bold text-[#5c4033]">
-                            ₹
-                            {formatPrice(
-                              order.total_amount
-                            )}
-                          </span>
-
-                          <span className="text-zinc-400">
-                            {isExpanded ? "⌃" : "⌄"}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-
-                    {isExpanded && (
-                      <div className="border-t border-zinc-100 px-5 pb-5 pt-5">
-
-                        {/* ACTIONS */}
-
-                        <div className="mb-5 flex flex-wrap gap-3">
-                          {canCustomerCancel && (
                             <button
                               type="button"
                               onClick={() =>
-                                openCancelModal(order)
+                                setExpandedOrderId(
+                                  isExpanded
+                                    ? null
+                                    : order.id
+                                )
                               }
-                              className="rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
+                              className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-100"
                             >
-                              Cancel Order
+                              {isExpanded
+                                ? "Hide"
+                                : "View"}
                             </button>
-                          )}
-
-                          {order.order_status === "canceled" && (
-                            <span className="rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-xs font-bold text-red-700">
-                              Order Canceled
-                            </span>
-                          )}
-
-                          {order.order_status === "delivered" && (
-                            <span className="rounded-full border border-green-200 bg-green-50 px-5 py-2.5 text-xs font-bold text-green-700">
-                              Order Delivered
-                            </span>
-                          )}
-                        </div>
-
-                        {/* STATUS TIMELINE */}
-
-                        <div className="rounded-2xl bg-[#faf9f6] p-5">
-                          <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">
-                            Order Status
-                          </p>
-
-                          <div className="mt-5 grid grid-cols-5 gap-1">
-                            {[
-                              "pending",
-                              "confirmed",
-                              "out_for_delivery",
-                              "delivered",
-                            ].map((status, index) => {
-                              const orderStatus =
-                                order.order_status;
-
-                              const statusOrder = [
-                                "pending",
-                                "confirmed",
-                                "out_for_delivery",
-                                "delivered",
-                              ];
-
-                              const currentIndex =
-                                statusOrder.indexOf(
-                                  orderStatus ||
-                                    "pending"
-                                );
-
-                              const active =
-                                orderStatus !== "canceled" &&
-                                currentIndex >= index;
-
-                              return (
-                                <div
-                                  key={status}
-                                  className="relative text-center"
-                                >
-                                  <div
-                                    className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                                      active
-                                        ? "bg-zinc-900 text-white"
-                                        : "bg-zinc-200 text-zinc-400"
-                                    }`}
-                                  >
-                                    {active
-                                      ? "✓"
-                                      : index + 1}
-                                  </div>
-
-                                  <p className="mt-2 hidden text-[10px] font-semibold text-zinc-500 sm:block">
-                                    {statusLabels[status]}
-                                  </p>
-
-                                  {index < 3 && (
-                                    <div
-                                      className={`absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-4 h-px ${
-                                        active &&
-                                        currentIndex >
-                                          index
-                                          ? "bg-zinc-900"
-                                          : "bg-zinc-200"
-                                      }`}
-                                    />
-                                  )}
-                                </div>
-                              );
-                            })}
                           </div>
+                        </div>
+                      </div>
 
-                          {order.order_status ===
+                      {/* EXPANDED ORDER */}
+
+                      {isExpanded && (
+                        <div className="border-t border-gray-200 bg-gray-50 p-5">
+                          {/* CANCELLED ALERT */}
+
+                          {status ===
                             "canceled" && (
-                            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
-                              <p className="text-sm font-bold text-red-700">
-                                Order Canceled
+                            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4">
+                              <p className="font-bold text-red-800">
+                                This order has been canceled.
                               </p>
 
                               {order.cancellation_reason && (
-                                <p className="mt-1 text-xs leading-5 text-red-600">
-                                  Reason:{" "}
+                                <p className="mt-2 text-sm text-red-700">
+                                  <strong>
+                                    Reason:
+                                  </strong>{" "}
                                   {
                                     order.cancellation_reason
                                   }
                                 </p>
                               )}
 
-                              {Number(
-                                order.cancellation_charge ||
-                                  0
-                              ) > 0 && (
-                                <p className="mt-1 text-xs text-red-600">
-                                  Cancellation charge: ₹
-                                  {formatPrice(
-                                    order.cancellation_charge
-                                  )}
-                                </p>
-                              )}
+                              <p className="mt-1 text-sm text-red-700">
+                                <strong>
+                                  Cancellation Charge:
+                                </strong>{" "}
+                                {formatPrice(
+                                  order.cancellation_charge ||
+                                    0
+                                )}
+                              </p>
                             </div>
                           )}
-                        </div>
 
-                        {/* PRODUCTS */}
+                          {/* ORDER ITEMS */}
 
-                        <div className="mt-5">
-                          <h3 className="text-sm font-bold text-zinc-800">
-                            Products
-                          </h3>
+                          <div>
+                            <h3 className="font-bold text-gray-900">
+                              Items
+                            </h3>
 
-                          <div className="mt-3 space-y-3">
-                            {items.map((item, index) => {
-                              const quantity = Number(
-                                item.quantity || 1
-                              );
-
-                              const price = Number(
-                                item.price || 0
-                              );
-
-                              return (
-                                <div
-                                  key={`${order.id}-${item.id || item.name || index}`}
-                                  className="flex gap-3 rounded-2xl bg-[#faf9f6] p-3"
-                                >
-                                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#eee8dc]">
-                                    {item.image ? (
-                                      <img
-                                        src={item.image}
-                                        alt={
-                                          item.name ||
-                                          "Product"
-                                        }
-                                        className="h-full w-full object-contain p-2"
-                                      />
-                                    ) : (
-                                      <div className="flex h-full items-center justify-center text-xl">
-                                        🍳
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="min-w-0 flex-1">
-                                    <p className="line-clamp-2 text-sm font-semibold text-zinc-800">
-                                      {item.name ||
-                                        "Product"}
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-zinc-500">
-                                      Qty: {quantity}
-                                    </p>
-                                  </div>
-
-                                  <div className="text-right">
-                                    <p className="text-sm font-bold text-[#5c4033]">
-                                      ₹
-                                      {formatPrice(
-                                        price * quantity
+                            <div className="mt-3 space-y-3">
+                              {Array.isArray(
+                                order.items
+                              ) &&
+                                order.items.map(
+                                  (
+                                    item,
+                                    index
+                                  ) => (
+                                    <div
+                                      key={`${item.id}-${index}`}
+                                      className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3"
+                                    >
+                                      {item.image ? (
+                                        <img
+                                          src={
+                                            item.image
+                                          }
+                                          alt={
+                                            item.name
+                                          }
+                                          className="h-16 w-16 rounded-lg object-cover"
+                                        />
+                                      ) : (
+                                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100 text-2xl">
+                                          📦
+                                        </div>
                                       )}
-                                    </p>
 
-                                    <p className="mt-1 text-[11px] text-zinc-400">
-                                      ₹
-                                      {formatPrice(price)}{" "}
-                                      each
-                                    </p>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-semibold text-gray-900">
+                                          {
+                                            item.name
+                                          }
+                                        </p>
 
-                        {/* DELIVERY ADDRESS */}
+                                        <p className="mt-1 text-sm text-gray-500">
+                                          Qty:{" "}
+                                          {
+                                            item.quantity
+                                          }
+                                        </p>
+                                      </div>
 
-                        <div className="mt-5 rounded-2xl border border-zinc-100 bg-white p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="text-lg">📍</div>
-
-                            <div>
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">
-                                Delivery Address
-                              </p>
-
-                              <p className="mt-2 text-sm font-semibold text-zinc-800">
-                                {order.delivery_address}
-                              </p>
-
-                              <p className="mt-1 text-xs text-zinc-500">
-                                {order.city}
-                                {order.pincode
-                                  ? ` - ${order.pincode}`
-                                  : ""}
-                              </p>
+                                      <p className="font-bold text-gray-900">
+                                        {formatPrice(
+                                          Number(
+                                            item.price
+                                          ) *
+                                            Number(
+                                              item.quantity
+                                            )
+                                        )}
+                                      </p>
+                                    </div>
+                                  )
+                                )}
                             </div>
                           </div>
-                        </div>
 
-                        {/* PRICE DETAILS */}
+                          {/* SUMMARY */}
 
-                        <div className="mt-5 rounded-2xl bg-[#faf9f6] p-5">
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-zinc-500">
+                          <div className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex justify-between py-1 text-sm">
+                              <span className="text-gray-600">
                                 Subtotal
                               </span>
 
-                              <span className="text-sm font-semibold text-zinc-800">
-                                ₹
+                              <span className="font-medium">
                                 {formatPrice(
                                   order.subtotal
                                 )}
                               </span>
                             </div>
 
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-zinc-500">
-                                Delivery Fee
+                            <div className="flex justify-between py-1 text-sm">
+                              <span className="text-gray-600">
+                                Delivery
                               </span>
 
-                              <span className="text-sm font-semibold text-zinc-800">
-                                {Number(
-                                  order.delivery_charge ||
-                                    0
-                                ) === 0
-                                  ? "FREE"
-                                  : `₹${formatPrice(
+                              <span className="font-medium">
+                                {order.delivery_charge ===
+                                0
+                                  ? "Free"
+                                  : formatPrice(
                                       order.delivery_charge
-                                    )}`}
+                                    )}
                               </span>
                             </div>
 
@@ -1420,13 +1583,12 @@ function AccountContent() {
                               order.cancellation_charge ||
                                 0
                             ) > 0 && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-red-500">
+                              <div className="flex justify-between py-1 text-sm text-red-600">
+                                <span>
                                   Cancellation Charge
                                 </span>
 
-                                <span className="text-sm font-semibold text-red-600">
-                                  ₹
+                                <span className="font-medium">
                                   {formatPrice(
                                     order.cancellation_charge
                                   )}
@@ -1434,514 +1596,314 @@ function AccountContent() {
                               </div>
                             )}
 
-                            <div className="border-t border-zinc-200 pt-3">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-[#5c4033]">
-                                  Total
-                                </span>
+                            <div className="mt-2 flex justify-between border-t border-gray-200 pt-3">
+                              <span className="font-bold text-gray-900">
+                                Total
+                              </span>
 
-                                <span className="text-xl font-bold text-[#5c4033]">
-                                  ₹
-                                  {formatPrice(
-                                    order.total_amount
-                                  )}
-                                </span>
-                              </div>
+                              <span className="font-bold text-gray-900">
+                                {formatPrice(
+                                  order.total_amount
+                                )}
+                              </span>
                             </div>
                           </div>
-                        </div>
 
-                        {/* PAYMENT */}
+                          {/* PAYMENT */}
 
-                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-white p-4">
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">
-                              Payment
+                          <div className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <h3 className="font-bold text-gray-900">
+                                  Payment Status
+                                </h3>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                  Payment status is updated after verification.
+                                </p>
+                              </div>
+
+                              <span
+                                className={`rounded-full border px-3 py-1 text-xs font-bold ${getPaymentClasses(
+                                  paymentStatus
+                                )}`}
+                              >
+                                {formatPaymentStatus(
+                                  paymentStatus
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* STATUS TIMELINE */}
+
+                          <div className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+                            <h3 className="font-bold text-gray-900">
+                              Order Timeline
+                            </h3>
+
+                            <div className="mt-5 space-y-4">
+                              {[
+                                "pending",
+                                "confirmed",
+                                "out_for_delivery",
+                                "delivered",
+                              ].map(
+                                (
+                                  step,
+                                  index
+                                ) => {
+                                  const statusOrder =
+                                    [
+                                      "pending",
+                                      "confirmed",
+                                      "out_for_delivery",
+                                      "delivered",
+                                    ];
+
+                                  const currentIndex =
+                                    statusOrder.indexOf(
+                                      status
+                                    );
+
+                                  const stepIndex =
+                                    index;
+
+                                  const completed =
+                                    status !==
+                                      "canceled" &&
+                                    currentIndex >=
+                                      stepIndex;
+
+                                  return (
+                                    <div
+                                      key={
+                                        step
+                                      }
+                                      className="flex items-start gap-3"
+                                    >
+                                      <div
+                                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                          completed
+                                            ? "bg-black text-white"
+                                            : "bg-gray-200 text-gray-500"
+                                        }`}
+                                      >
+                                        {completed
+                                          ? "✓"
+                                          : index +
+                                            1}
+                                      </div>
+
+                                      <div>
+                                        <p
+                                          className={`font-semibold ${
+                                            completed
+                                              ? "text-gray-900"
+                                              : "text-gray-400"
+                                          }`}
+                                        >
+                                          {formatStatus(
+                                            step
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              )}
+
+                              {status ===
+                                "canceled" && (
+                                <div className="flex items-start gap-3">
+                                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-600 text-sm font-bold text-white">
+                                    ×
+                                  </div>
+
+                                  <div>
+                                    <p className="font-semibold text-red-700">
+                                      Order Canceled
+                                    </p>
+
+                                    <p className="mt-1 text-sm text-gray-500">
+                                      Updated{" "}
+                                      {formatDate(
+                                        order.updated_at
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* DELIVERY ADDRESS */}
+
+                          <div className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+                            <h3 className="font-bold text-gray-900">
+                              Delivery Address
+                            </h3>
+
+                            <p className="mt-2 text-gray-700">
+                              {
+                                order.delivery_address
+                              }
                             </p>
 
-                            <p
-                              className={`mt-1 text-sm font-semibold ${
-                                order.payment_status ===
-                                "paid"
-                                  ? "text-green-700"
-                                  : order.payment_status ===
-                                    "failed"
-                                  ? "text-red-700"
-                                  : order.payment_status ===
-                                    "refunded"
-                                  ? "text-blue-700"
-                                  : "text-amber-700"
-                              }`}
-                            >
-                              {formatPaymentStatus(
-                                order.payment_status
-                              )}
+                            <p className="text-gray-500">
+                              {
+                                order.city
+                              }{" "}
+                              -{" "}
+                              {
+                                order.pincode
+                              }
                             </p>
                           </div>
 
-                          <div className="text-right">
-                            <p className="text-xs text-zinc-400">
-                              Order placed
-                            </p>
+                          {/* BOTTOM ACTION */}
 
-                            <p className="mt-1 text-xs font-semibold text-zinc-600">
-                              {formatDateTime(
-                                order.created_at
-                              )}
-                            </p>
+                          <div className="mt-5 flex flex-wrap gap-3">
+                            {canCancel && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openCancelModal(
+                                    order
+                                  )
+                                }
+                                className="rounded-xl border border-red-200 bg-red-50 px-5 py-3 font-bold text-red-700 transition hover:bg-red-100"
+                              >
+                                Cancel Order
+                              </button>
+                            )}
+
+                            {status ===
+                              "canceled" && (
+                              <span className="rounded-xl bg-gray-100 px-5 py-3 font-semibold text-gray-600">
+                                Order Canceled
+                              </span>
+                            )}
+
+                            {status ===
+                              "delivered" && (
+                              <span className="rounded-xl bg-green-50 px-5 py-3 font-semibold text-green-700">
+                                Order Delivered
+                              </span>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  );
+                }
+              )}
             </div>
           )}
         </section>
-
-        {/* ACCOUNT OPTIONS */}
-
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-
-          {/* DELIVERY ADDRESS */}
-
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5efe4] text-xl">
-              📍
-            </div>
-
-            <h2 className="mt-5 text-lg font-bold">
-              Delivery Address
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Save your delivery address for faster checkout.
-            </p>
-
-            {!addressEditing && !addressMissing ? (
-              <div className="mt-5 rounded-2xl bg-[#faf9f6] p-4">
-                <p className="text-sm font-semibold leading-6 text-zinc-900">
-                  {user.address}
-                </p>
-
-                <p className="mt-1 text-xs text-zinc-500">
-                  {user.city} - {user.pincode}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError("");
-                    setMessage("");
-
-                    setAddress(user.address);
-                    setCity(user.city);
-                    setPincode(user.pincode);
-
-                    setAddressEditing(true);
-                  }}
-                  className="mt-4 rounded-full bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-amber-700"
-                >
-                  Edit Address
-                </button>
-              </div>
-            ) : (
-              <div className="mt-5">
-                <label className="mb-2 block text-xs font-bold text-zinc-700">
-                  Full Delivery Address
-                </label>
-
-                <textarea
-                  value={address}
-                  onChange={(e) =>
-                    setAddress(e.target.value)
-                  }
-                  rows={3}
-                  placeholder="House no., street, area..."
-                  className="w-full resize-none rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-1 focus:ring-[#eee8dc]"
-                />
-
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-xs font-bold text-zinc-700">
-                      City
-                    </label>
-
-                    <input
-                      type="text"
-                      value={city}
-                      onChange={(e) =>
-                        setCity(e.target.value)
-                      }
-                      placeholder="City"
-                      className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-1 focus:ring-[#eee8dc]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-xs font-bold text-zinc-700">
-                      Pincode
-                    </label>
-
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={pincode}
-                      onChange={(e) =>
-                        setPincode(
-                          e.target.value
-                            .replace(/\D/g, "")
-                            .slice(0, 6)
-                        )
-                      }
-                      placeholder="6-digit pincode"
-                      maxLength={6}
-                      className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-1 focus:ring-[#eee8dc]"
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-xs text-red-700">
-                    {error}
-                  </div>
-                )}
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveAddress}
-                    disabled={savingAddress}
-                    className="rounded-full bg-zinc-900 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {savingAddress
-                      ? "Saving..."
-                      : "Save Address"}
-                  </button>
-
-                  {!addressMissing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAddress(user.address);
-                        setCity(user.city);
-                        setPincode(user.pincode);
-                        setAddressEditing(false);
-                        setError("");
-                      }}
-                      className="rounded-full border border-zinc-200 bg-white px-5 py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* WHATSAPP */}
-
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl ${
-                  whatsappEnabled
-                    ? "bg-green-50"
-                    : "bg-zinc-100"
-                }`}
-              >
-                💬
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-bold text-zinc-900">
-                    WhatsApp Updates
-                  </h2>
-
-                  {!whatsappLoading && (
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-                        whatsappEnabled
-                          ? "bg-green-50 text-green-700"
-                          : "bg-zinc-100 text-zinc-500"
-                      }`}
-                    >
-                      {whatsappEnabled ? "ON" : "OFF"}
-                    </span>
-                  )}
-                </div>
-
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  Get important updates about your orders and delivery directly on WhatsApp.
-                </p>
-              </div>
-            </div>
-
-            <div
-              className={`mt-6 rounded-2xl p-5 ${
-                whatsappEnabled
-                  ? "bg-green-50"
-                  : "bg-[#faf9f6]"
-              }`}
-            >
-              {whatsappLoading ? (
-                <div className="flex items-center gap-3">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900" />
-
-                  <p className="text-sm text-zinc-500">
-                    Loading WhatsApp settings...
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm ${
-                      whatsappEnabled
-                        ? "bg-green-600 text-white"
-                        : "bg-zinc-200 text-zinc-500"
-                    }`}
-                  >
-                    {whatsappEnabled ? "✓" : "○"}
-                  </div>
-
-                  <div>
-                    <p
-                      className={`text-sm font-bold ${
-                        whatsappEnabled
-                          ? "text-green-800"
-                          : "text-zinc-700"
-                      }`}
-                    >
-                      {whatsappEnabled
-                        ? "WhatsApp updates are ON"
-                        : "WhatsApp updates are OFF"}
-                    </p>
-
-                    <p
-                      className={`mt-1 text-xs leading-5 ${
-                        whatsappEnabled
-                          ? "text-green-700"
-                          : "text-zinc-500"
-                      }`}
-                    >
-                      {whatsappEnabled
-                        ? "You'll receive order and delivery updates on WhatsApp."
-                        : "Turn on WhatsApp updates to receive order and delivery notifications."}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 rounded-2xl bg-[#faf9f6] p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">
-                WhatsApp Number
-              </p>
-
-              {user.phone ? (
-                <p className="mt-2 text-sm font-semibold text-zinc-800">
-                  +91 {user.phone}
-                </p>
-              ) : (
-                <p className="mt-2 text-sm font-medium text-amber-700">
-                  Please add your mobile number first.
-                </p>
-              )}
-            </div>
-
-            {user.phone && !whatsappLoading && (
-              <button
-                type="button"
-                onClick={handleWhatsappToggle}
-                disabled={whatsappSaving}
-                className={`mt-5 w-full rounded-full px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                  whatsappEnabled
-                    ? "bg-zinc-900 hover:bg-red-600"
-                    : "bg-green-600 hover:bg-green-700"
-                }`}
-              >
-                {whatsappSaving
-                  ? "Updating..."
-                  : whatsappEnabled
-                  ? "Turn Off WhatsApp Updates"
-                  : "Turn On WhatsApp Updates"}
-              </button>
-            )}
-          </section>
-
-          {/* CUSTOMER SUPPORT */}
-
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5efe4] text-xl">
-              🛟
-            </div>
-
-            <h2 className="mt-5 text-lg font-bold">
-              Customer Support
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Need help with a product or order? Contact us directly.
-            </p>
-
-            <a
-              href="https://wa.me/917011872380"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
-            >
-              💬 Chat on WhatsApp
-            </a>
-          </section>
-
-          {/* SHOPPING */}
-
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5efe4] text-xl">
-              🛍️
-            </div>
-
-            <h2 className="mt-5 text-lg font-bold">
-              Continue Shopping
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Explore our latest kitchenware and electronics products.
-            </p>
-
-            <Link
-              href="/#products"
-              className="mt-5 inline-block rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
-            >
-              Browse Products →
-            </Link>
-          </section>
-        </div>
-
-        {/* FOOTER */}
-
-        <Link
-          href="/"
-          className="mt-8 block text-center text-xs text-zinc-500 transition hover:text-zinc-900 hover:underline"
-        >
-          ← Back to store
-        </Link>
       </div>
 
-      {/* =====================================================
-          CUSTOMER CANCEL MODAL
-      ===================================================== */}
+      {/* CUSTOMER CANCEL MODAL */}
 
       {cancelOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-7">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-zinc-900">
+                <h2 className="text-xl font-bold text-gray-900">
                   Cancel Order
                 </h2>
 
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-gray-500">
                   Order #
-                  {String(cancelOrder.id).slice(0, 8)}
+                  {cancelOrder.id
+                    .slice(
+                      0,
+                      8
+                    )
+                    .toUpperCase()}
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={closeCancelModal}
-                disabled={cancelLoading}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 disabled:opacity-50"
+                onClick={
+                  closeCancelModal
+                }
+                disabled={
+                  cancelLoading
+                }
+                className="text-2xl leading-none text-gray-400 hover:text-gray-700 disabled:opacity-50"
+                aria-label="Close"
               >
-                ✕
+                ×
               </button>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-bold text-amber-800">
-                Before you cancel
+            <div className="mt-5 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+              <p className="text-sm text-yellow-800">
+                You can cancel this order while it is{" "}
+                <strong>
+                  Pending
+                </strong>{" "}
+                or{" "}
+                <strong>
+                  Confirmed
+                </strong>
+                .
               </p>
 
-              <p className="mt-1 text-xs leading-5 text-amber-700">
-                Customer cancellation is available while the
-                order is Pending or Confirmed.
+              <p className="mt-2 text-sm font-semibold text-yellow-800">
+                Cancellation Charge: ₹0
               </p>
-            </div>
-
-            <div className="mt-5 rounded-2xl bg-[#faf9f6] p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-500">
-                  Order Total
-                </span>
-
-                <span className="text-lg font-bold text-[#5c4033]">
-                  ₹
-                  {formatPrice(
-                    cancelOrder.total_amount
-                  )}
-                </span>
-              </div>
-
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-sm text-zinc-500">
-                  Customer Cancellation Charge
-                </span>
-
-                <span className="text-sm font-bold text-green-700">
-                  ₹0
-                </span>
-              </div>
             </div>
 
             <div className="mt-5">
-              <label
-                htmlFor="cancelReason"
-                className="mb-2 block text-sm font-bold text-zinc-900"
-              >
-                Cancellation Reason
+              <label className="mb-2 block text-sm font-semibold text-gray-900">
+                Why do you want to cancel?
               </label>
 
               <textarea
-                id="cancelReason"
                 value={cancelReason}
-                onChange={(e) =>
-                  setCancelReason(e.target.value)
+                onChange={(event) =>
+                  setCancelReason(
+                    event.target.value
+                  )
                 }
                 rows={4}
-                maxLength={500}
-                placeholder="Please tell us why you want to cancel this order..."
-                disabled={cancelLoading}
-                className="w-full resize-none rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-2 focus:ring-[#eee8dc] disabled:bg-zinc-50"
+                placeholder="Enter cancellation reason..."
+                disabled={
+                  cancelLoading
+                }
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-black disabled:bg-gray-100"
               />
-
-              <p className="mt-1 text-right text-[11px] text-zinc-400">
-                {cancelReason.length}/500
-              </p>
             </div>
-
-            {error && (
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={closeCancelModal}
-                disabled={cancelLoading}
-                className="rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                onClick={
+                  closeCancelModal
+                }
+                disabled={
+                  cancelLoading
+                }
+                className="rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-800 disabled:opacity-50"
               >
                 Keep Order
               </button>
 
               <button
                 type="button"
-                onClick={handleCustomerCancelOrder}
-                disabled={cancelLoading}
-                className="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={
+                  handleCustomerCancelOrder
+                }
+                disabled={
+                  cancelLoading ||
+                  cancelReason.trim()
+                    .length < 3
+                }
+                className="rounded-xl bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {cancelLoading
                   ? "Canceling..."
@@ -1959,12 +1921,11 @@ export default function AccountPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#faf9f6]">
+        <main className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#5c4033] border-t-transparent" />
-
-            <p className="mt-4 text-sm text-[#6b5a4d]">
-              Loading account...
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
+            <p className="text-gray-600">
+              Loading...
             </p>
           </div>
         </main>
