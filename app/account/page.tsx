@@ -2,6 +2,7 @@
 
 import {
   Suspense,
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -54,6 +55,13 @@ const statusLabels: Record<string, string> = {
   out_for_delivery: "Out for Delivery",
   delivered: "Delivered",
   canceled: "Canceled",
+};
+
+const paymentLabels: Record<string, string> = {
+  pending: "Payment Pending",
+  paid: "Paid",
+  failed: "Payment Failed",
+  refunded: "Refunded",
 };
 
 function getStatusClasses(status?: string | null) {
@@ -109,6 +117,19 @@ function formatStatus(status?: string | null) {
   );
 }
 
+function formatPaymentStatus(status?: string | null) {
+  if (!status) {
+    return "Payment Pending";
+  }
+
+  return (
+    paymentLabels[status] ||
+    status
+      .replaceAll("_", " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  );
+}
+
 function formatDate(date?: string | null) {
   if (!date) {
     return "";
@@ -157,47 +178,113 @@ function AccountContent() {
   const [user, setUser] = useState<UserData | null>(null);
 
   const [loading, setLoading] = useState(true);
-
   const [orders, setOrders] = useState<Order[]>([]);
-
   const [loadingOrders, setLoadingOrders] = useState(true);
 
   const [phone, setPhone] = useState("");
-
   const [savingPhone, setSavingPhone] = useState(false);
 
   const [addressEditing, setAddressEditing] = useState(false);
-
   const [address, setAddress] = useState("");
-
   const [city, setCity] = useState("");
-
   const [pincode, setPincode] = useState("");
-
   const [savingAddress, setSavingAddress] = useState(false);
 
   const [error, setError] = useState("");
-
   const [message, setMessage] = useState("");
 
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
-
   const [whatsappLoading, setWhatsappLoading] = useState(true);
-
   const [whatsappSaving, setWhatsappSaving] = useState(false);
 
   const [expandedOrderId, setExpandedOrderId] =
     useState<string | null>(highlightedOrderId);
 
-  /* =========================================================
-     LOAD USER + ORDERS + WHATSAPP SETTINGS
-  ========================================================= */
+  const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  /*
+   * =========================================================
+   * LOAD ORDERS
+   * =========================================================
+   */
+
+  const loadOrders = useCallback(async () => {
+    try {
+      setLoadingOrders(true);
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        console.error("SESSION ERROR:", sessionError);
+        setLoadingOrders(false);
+        return;
+      }
+
+      const response = await fetch("/api/orders", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+      });
+
+      let result: any = null;
+
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
+
+      if (response.ok && result?.success) {
+        const fetchedOrders = Array.isArray(result.orders)
+          ? result.orders
+          : [];
+
+        setOrders(fetchedOrders);
+
+        if (
+          highlightedOrderId &&
+          fetchedOrders.some(
+            (order: Order) =>
+              String(order.id) === String(highlightedOrderId)
+          )
+        ) {
+          setExpandedOrderId(highlightedOrderId);
+        }
+      } else {
+        console.error("ORDERS FETCH ERROR:", result);
+
+        setError(
+          result?.error ||
+            result?.message ||
+            "Unable to load your orders."
+        );
+      }
+    } catch (error) {
+      console.error("LOAD ORDERS ERROR:", error);
+
+      setError("Unable to load your orders. Please try again.");
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, [highlightedOrderId]);
+
+  /*
+   * =========================================================
+   * LOAD USER + SETTINGS
+   * =========================================================
+   */
 
   useEffect(() => {
     async function loadAccount() {
       try {
         setLoading(true);
-        setLoadingOrders(true);
         setWhatsappLoading(true);
 
         const {
@@ -223,9 +310,7 @@ function AccountContent() {
         const provider = user.app_metadata?.provider || "email";
 
         const savedAddress = metadata.address || "";
-
         const savedCity = metadata.city || "";
-
         const savedPincode = metadata.pincode || "";
 
         const cleanPhone = String(savedPhone).replace(/\D/g, "");
@@ -242,18 +327,16 @@ function AccountContent() {
         };
 
         setUser(accountUser);
-
         setPhone(cleanPhone);
-
         setAddress(String(savedAddress));
-
         setCity(String(savedCity));
-
         setPincode(String(savedPincode));
 
-        /* ===================================================
-           SYNC WHATSAPP PHONE
-        =================================================== */
+        /*
+         * =====================================================
+         * WHATSAPP PHONE SYNC
+         * =====================================================
+         */
 
         const { error: whatsappSyncError } = await supabase
           .from("customer_whatsapp_settings")
@@ -275,9 +358,11 @@ function AccountContent() {
           );
         }
 
-        /* ===================================================
-           LOAD WHATSAPP SETTINGS
-        =================================================== */
+        /*
+         * =====================================================
+         * LOAD WHATSAPP SETTINGS
+         * =====================================================
+         */
 
         const {
           data: whatsappSettings,
@@ -293,6 +378,8 @@ function AccountContent() {
             "WHATSAPP SETTINGS LOAD ERROR:",
             whatsappSettingsError
           );
+
+          setWhatsappEnabled(false);
         } else if (whatsappSettings) {
           setWhatsappEnabled(Boolean(whatsappSettings.enabled));
         } else {
@@ -301,67 +388,8 @@ function AccountContent() {
 
         setWhatsappLoading(false);
 
-        /* ===================================================
-           GET SESSION
-        =================================================== */
+        await loadOrders();
 
-        const {
-          data: sessionData,
-          error: sessionError,
-        } = await supabase.auth.getSession();
-
-        if (sessionError || !sessionData.session) {
-          console.error("SESSION ERROR:", sessionError);
-
-          setLoadingOrders(false);
-          setLoading(false);
-          return;
-        }
-
-        /* ===================================================
-           GET ORDERS THROUGH API
-        =================================================== */
-
-        const response = await fetch("/api/orders", {
-          method: "GET",
-
-          headers: {
-            Authorization:
-              `Bearer ${sessionData.session.access_token}`,
-          },
-
-          cache: "no-store",
-        });
-
-        let result: any = null;
-
-        try {
-          result = await response.json();
-        } catch {
-          result = null;
-        }
-
-        if (response.ok && result?.success) {
-          const fetchedOrders = Array.isArray(result.orders)
-            ? result.orders
-            : [];
-
-          setOrders(fetchedOrders);
-
-          if (
-            highlightedOrderId &&
-            fetchedOrders.some(
-              (order: Order) =>
-                String(order.id) === String(highlightedOrderId)
-            )
-          ) {
-            setExpandedOrderId(highlightedOrderId);
-          }
-        } else {
-          console.error("ORDERS FETCH ERROR:", result);
-        }
-
-        setLoadingOrders(false);
         setLoading(false);
       } catch (error) {
         console.error("ACCOUNT LOAD ERROR:", error);
@@ -373,11 +401,13 @@ function AccountContent() {
     }
 
     loadAccount();
-  }, [highlightedOrderId]);
+  }, [loadOrders]);
 
-  /* =========================================================
-     SAVE PHONE
-  ========================================================= */
+  /*
+   * =========================================================
+   * SAVE PHONE
+   * =========================================================
+   */
 
   async function handleSavePhone() {
     setError("");
@@ -425,8 +455,6 @@ function AccountContent() {
 
       setPhone(cleanPhone);
 
-      /* Sync WhatsApp number after phone update */
-
       if (user) {
         const { error: whatsappSyncError } = await supabase
           .from("customer_whatsapp_settings")
@@ -461,18 +489,18 @@ function AccountContent() {
     }
   }
 
-  /* =========================================================
-     SAVE ADDRESS
-  ========================================================= */
+  /*
+   * =========================================================
+   * SAVE ADDRESS
+   * =========================================================
+   */
 
   async function handleSaveAddress() {
     setError("");
     setMessage("");
 
     const cleanAddress = address.trim();
-
     const cleanCity = city.trim();
-
     const cleanPincode = pincode.trim();
 
     if (!cleanAddress) {
@@ -526,9 +554,7 @@ function AccountContent() {
       }
 
       setAddress(cleanAddress);
-
       setCity(cleanCity);
-
       setPincode(cleanPincode);
 
       setAddressEditing(false);
@@ -545,9 +571,11 @@ function AccountContent() {
     }
   }
 
-  /* =========================================================
-     TOGGLE WHATSAPP
-  ========================================================= */
+  /*
+   * =========================================================
+   * WHATSAPP TOGGLE
+   * =========================================================
+   */
 
   async function handleWhatsappToggle() {
     if (!user) {
@@ -560,9 +588,7 @@ function AccountContent() {
 
     try {
       if (!user.phone) {
-        setError(
-          "Please add your mobile number first."
-        );
+        setError("Please add your mobile number first.");
         return;
       }
 
@@ -603,10 +629,7 @@ function AccountContent() {
           : "WhatsApp updates disabled successfully."
       );
     } catch (error) {
-      console.error(
-        "WHATSAPP TOGGLE ERROR:",
-        error
-      );
+      console.error("WHATSAPP TOGGLE ERROR:", error);
 
       setError(
         "Unable to update WhatsApp settings. Please try again."
@@ -616,9 +639,166 @@ function AccountContent() {
     }
   }
 
-  /* =========================================================
-     LOGOUT
-  ========================================================= */
+  /*
+   * =========================================================
+   * CUSTOMER CANCEL ORDER
+   * =========================================================
+   *
+   * Customer can cancel only:
+   *
+   * pending
+   * confirmed
+   *
+   * Customer cancellation charge = ₹0
+   *
+   * Admin can separately apply a cancellation charge.
+   */
+
+  function openCancelModal(order: Order) {
+    if (
+      order.order_status !== "pending" &&
+      order.order_status !== "confirmed"
+    ) {
+      setError(
+        "This order can no longer be canceled."
+      );
+      return;
+    }
+
+    setError("");
+    setMessage("");
+    setCancelReason("");
+    setCancelOrder(order);
+  }
+
+  function closeCancelModal() {
+    if (cancelLoading) {
+      return;
+    }
+
+    setCancelOrder(null);
+    setCancelReason("");
+  }
+
+  async function handleCustomerCancelOrder() {
+    if (!cancelOrder) {
+      return;
+    }
+
+    const reason = cancelReason.trim();
+
+    if (!reason) {
+      setError("Please enter a cancellation reason.");
+      return;
+    }
+
+    if (reason.length < 3) {
+      setError(
+        "Please enter a valid cancellation reason."
+      );
+      return;
+    }
+
+    setError("");
+    setMessage("");
+    setCancelLoading(true);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        setError(
+          "Your session has expired. Please login again."
+        );
+        return;
+      }
+
+      const response = await fetch("/api/orders", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          id: cancelOrder.id,
+          order_status: "canceled",
+          cancellation_reason: reason,
+          cancellation_charge: 0,
+        }),
+      });
+
+      let result: any = null;
+
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
+
+      if (!response.ok || !result?.success) {
+        console.error(
+          "CUSTOMER CANCEL ERROR:",
+          result
+        );
+
+        setError(
+          result?.error ||
+            result?.message ||
+            "Unable to cancel this order."
+        );
+
+        return;
+      }
+
+      const updatedOrder: Order =
+        result.order || {
+          ...cancelOrder,
+          order_status: "canceled",
+          cancellation_reason: reason,
+          cancellation_charge: 0,
+        };
+
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          String(order.id) === String(cancelOrder.id)
+            ? {
+                ...order,
+                ...updatedOrder,
+              }
+            : order
+        )
+      );
+
+      setCancelOrder(null);
+      setCancelReason("");
+
+      setExpandedOrderId(String(cancelOrder.id));
+
+      setMessage(
+        "Your order has been canceled successfully."
+      );
+    } catch (error) {
+      console.error(
+        "CUSTOMER CANCEL REQUEST ERROR:",
+        error
+      );
+
+      setError(
+        "Unable to cancel the order. Please try again."
+      );
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
+  /*
+   * =========================================================
+   * LOGOUT
+   * =========================================================
+   */
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -626,9 +806,11 @@ function AccountContent() {
     window.location.href = "/";
   }
 
-  /* =========================================================
-     LOADING
-  ========================================================= */
+  /*
+   * =========================================================
+   * LOADING
+   * =========================================================
+   */
 
   if (loading) {
     return (
@@ -659,9 +841,7 @@ function AccountContent() {
     <main className="min-h-screen bg-[#faf9f6] px-4 py-10 text-zinc-900 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-5xl">
 
-        {/* ===================================================
-            HEADER
-        =================================================== */}
+        {/* HEADER */}
 
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
@@ -690,9 +870,7 @@ function AccountContent() {
           </button>
         </div>
 
-        {/* ===================================================
-            GLOBAL MESSAGE
-        =================================================== */}
+        {/* GLOBAL MESSAGE */}
 
         {message && (
           <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
@@ -700,19 +878,16 @@ function AccountContent() {
           </div>
         )}
 
-        {error && !phoneMissing && !addressEditing && (
+        {error && !phoneMissing && !addressEditing && !cancelOrder && (
           <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {error}
           </div>
         )}
 
-        {/* ===================================================
-            PROFILE CARD
-        =================================================== */}
+        {/* PROFILE */}
 
         <section className="mt-8 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-2xl font-bold text-white">
               {user.full_name.charAt(0).toUpperCase()}
             </div>
@@ -737,7 +912,6 @@ function AccountContent() {
           </div>
 
           <div className="mt-7 grid gap-4 border-t border-zinc-100 pt-6 sm:grid-cols-2">
-
             <div className="rounded-2xl bg-[#faf9f6] p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                 Email
@@ -766,9 +940,7 @@ function AccountContent() {
           </div>
         </section>
 
-        {/* ===================================================
-            PHONE
-        =================================================== */}
+        {/* PHONE */}
 
         {phoneMissing && (
           <section className="mt-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
@@ -839,9 +1011,7 @@ function AccountContent() {
           </section>
         )}
 
-        {/* ===================================================
-            ORDERS
-        =================================================== */}
+        {/* ORDERS */}
 
         <section className="mt-6 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -909,6 +1079,10 @@ function AccountContent() {
                   ? order.items
                   : [];
 
+                const canCustomerCancel =
+                  order.order_status === "pending" ||
+                  order.order_status === "confirmed";
+
                 return (
                   <div
                     key={order.id}
@@ -956,14 +1130,21 @@ function AccountContent() {
                             )}`}
                           >
                             <span>
-                              {getStatusIcon(order.order_status)}
+                              {getStatusIcon(
+                                order.order_status
+                              )}
                             </span>
 
-                            {formatStatus(order.order_status)}
+                            {formatStatus(
+                              order.order_status
+                            )}
                           </span>
 
                           <span className="text-lg font-bold text-[#5c4033]">
-                            ₹{formatPrice(order.total_amount)}
+                            ₹
+                            {formatPrice(
+                              order.total_amount
+                            )}
                           </span>
 
                           <span className="text-zinc-400">
@@ -975,6 +1156,34 @@ function AccountContent() {
 
                     {isExpanded && (
                       <div className="border-t border-zinc-100 px-5 pb-5 pt-5">
+
+                        {/* ACTIONS */}
+
+                        <div className="mb-5 flex flex-wrap gap-3">
+                          {canCustomerCancel && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openCancelModal(order)
+                              }
+                              className="rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
+                            >
+                              Cancel Order
+                            </button>
+                          )}
+
+                          {order.order_status === "canceled" && (
+                            <span className="rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-xs font-bold text-red-700">
+                              Order Canceled
+                            </span>
+                          )}
+
+                          {order.order_status === "delivered" && (
+                            <span className="rounded-full border border-green-200 bg-green-50 px-5 py-2.5 text-xs font-bold text-green-700">
+                              Order Delivered
+                            </span>
+                          )}
+                        </div>
 
                         {/* STATUS TIMELINE */}
 
@@ -1002,14 +1211,13 @@ function AccountContent() {
 
                               const currentIndex =
                                 statusOrder.indexOf(
-                                  orderStatus || "pending"
+                                  orderStatus ||
+                                    "pending"
                                 );
-
-                              const thisIndex = index;
 
                               const active =
                                 orderStatus !== "canceled" &&
-                                currentIndex >= thisIndex;
+                                currentIndex >= index;
 
                               return (
                                 <div
@@ -1023,7 +1231,9 @@ function AccountContent() {
                                         : "bg-zinc-200 text-zinc-400"
                                     }`}
                                   >
-                                    {active ? "✓" : index + 1}
+                                    {active
+                                      ? "✓"
+                                      : index + 1}
                                   </div>
 
                                   <p className="mt-2 hidden text-[10px] font-semibold text-zinc-500 sm:block">
@@ -1034,7 +1244,8 @@ function AccountContent() {
                                     <div
                                       className={`absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-4 h-px ${
                                         active &&
-                                        currentIndex > thisIndex
+                                        currentIndex >
+                                          index
                                           ? "bg-zinc-900"
                                           : "bg-zinc-200"
                                       }`}
@@ -1045,7 +1256,8 @@ function AccountContent() {
                             })}
                           </div>
 
-                          {order.order_status === "canceled" && (
+                          {order.order_status ===
+                            "canceled" && (
                             <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
                               <p className="text-sm font-bold text-red-700">
                                 Order Canceled
@@ -1053,12 +1265,16 @@ function AccountContent() {
 
                               {order.cancellation_reason && (
                                 <p className="mt-1 text-xs leading-5 text-red-600">
-                                  Reason: {order.cancellation_reason}
+                                  Reason:{" "}
+                                  {
+                                    order.cancellation_reason
+                                  }
                                 </p>
                               )}
 
                               {Number(
-                                order.cancellation_charge || 0
+                                order.cancellation_charge ||
+                                  0
                               ) > 0 && (
                                 <p className="mt-1 text-xs text-red-600">
                                   Cancellation charge: ₹
@@ -1098,7 +1314,8 @@ function AccountContent() {
                                       <img
                                         src={item.image}
                                         alt={
-                                          item.name || "Product"
+                                          item.name ||
+                                          "Product"
                                         }
                                         className="h-full w-full object-contain p-2"
                                       />
@@ -1111,7 +1328,8 @@ function AccountContent() {
 
                                   <div className="min-w-0 flex-1">
                                     <p className="line-clamp-2 text-sm font-semibold text-zinc-800">
-                                      {item.name || "Product"}
+                                      {item.name ||
+                                        "Product"}
                                     </p>
 
                                     <p className="mt-1 text-xs text-zinc-500">
@@ -1128,7 +1346,9 @@ function AccountContent() {
                                     </p>
 
                                     <p className="mt-1 text-[11px] text-zinc-400">
-                                      ₹{formatPrice(price)} each
+                                      ₹
+                                      {formatPrice(price)}{" "}
+                                      each
                                     </p>
                                   </div>
                                 </div>
@@ -1172,7 +1392,10 @@ function AccountContent() {
                               </span>
 
                               <span className="text-sm font-semibold text-zinc-800">
-                                ₹{formatPrice(order.subtotal)}
+                                ₹
+                                {formatPrice(
+                                  order.subtotal
+                                )}
                               </span>
                             </div>
 
@@ -1183,7 +1406,8 @@ function AccountContent() {
 
                               <span className="text-sm font-semibold text-zinc-800">
                                 {Number(
-                                  order.delivery_charge || 0
+                                  order.delivery_charge ||
+                                    0
                                 ) === 0
                                   ? "FREE"
                                   : `₹${formatPrice(
@@ -1193,7 +1417,8 @@ function AccountContent() {
                             </div>
 
                             {Number(
-                              order.cancellation_charge || 0
+                              order.cancellation_charge ||
+                                0
                             ) > 0 && (
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-red-500">
@@ -1234,16 +1459,23 @@ function AccountContent() {
                               Payment
                             </p>
 
-                            <p className="mt-1 text-sm font-semibold text-zinc-800">
-                              {order.payment_status
-                                ? order.payment_status
-                                    .replaceAll("_", " ")
-                                    .replace(
-                                      /\b\w/g,
-                                      (char) =>
-                                        char.toUpperCase()
-                                    )
-                                : "Pending"}
+                            <p
+                              className={`mt-1 text-sm font-semibold ${
+                                order.payment_status ===
+                                "paid"
+                                  ? "text-green-700"
+                                  : order.payment_status ===
+                                    "failed"
+                                  ? "text-red-700"
+                                  : order.payment_status ===
+                                    "refunded"
+                                  ? "text-blue-700"
+                                  : "text-amber-700"
+                              }`}
+                            >
+                              {formatPaymentStatus(
+                                order.payment_status
+                              )}
                             </p>
                           </div>
 
@@ -1253,7 +1485,9 @@ function AccountContent() {
                             </p>
 
                             <p className="mt-1 text-xs font-semibold text-zinc-600">
-                              {formatDateTime(order.created_at)}
+                              {formatDateTime(
+                                order.created_at
+                              )}
                             </p>
                           </div>
                         </div>
@@ -1266,9 +1500,7 @@ function AccountContent() {
           )}
         </section>
 
-        {/* ===================================================
-            ACCOUNT OPTIONS
-        =================================================== */}
+        {/* ACCOUNT OPTIONS */}
 
         <div className="mt-6 grid gap-6 sm:grid-cols-2">
 
@@ -1322,7 +1554,9 @@ function AccountContent() {
 
                 <textarea
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) =>
+                    setAddress(e.target.value)
+                  }
                   rows={3}
                   placeholder="House no., street, area..."
                   className="w-full resize-none rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-1 focus:ring-[#eee8dc]"
@@ -1337,7 +1571,9 @@ function AccountContent() {
                     <input
                       type="text"
                       value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      onChange={(e) =>
+                        setCity(e.target.value)
+                      }
                       placeholder="City"
                       className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-1 focus:ring-[#eee8dc]"
                     />
@@ -1404,9 +1640,7 @@ function AccountContent() {
             )}
           </section>
 
-          {/* =================================================
-              WHATSAPP UPDATES
-          ================================================= */}
+          {/* WHATSAPP */}
 
           <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="flex items-start gap-4">
@@ -1444,8 +1678,6 @@ function AccountContent() {
                 </p>
               </div>
             </div>
-
-            {/* STATUS */}
 
             <div
               className={`mt-6 rounded-2xl p-5 ${
@@ -1503,8 +1735,6 @@ function AccountContent() {
               )}
             </div>
 
-            {/* PHONE */}
-
             <div className="mt-4 rounded-2xl bg-[#faf9f6] p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">
                 WhatsApp Number
@@ -1520,8 +1750,6 @@ function AccountContent() {
                 </p>
               )}
             </div>
-
-            {/* BUTTON */}
 
             {user.phone && !whatsappLoading && (
               <button
@@ -1592,9 +1820,7 @@ function AccountContent() {
           </section>
         </div>
 
-        {/* ===================================================
-            FOOTER BACK
-        =================================================== */}
+        {/* FOOTER */}
 
         <Link
           href="/"
@@ -1603,9 +1829,132 @@ function AccountContent() {
           ← Back to store
         </Link>
       </div>
+
+      {/* =====================================================
+          CUSTOMER CANCEL MODAL
+      ===================================================== */}
+
+      {cancelOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-zinc-900">
+                  Cancel Order
+                </h2>
+
+                <p className="mt-1 text-sm text-zinc-500">
+                  Order #
+                  {String(cancelOrder.id).slice(0, 8)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                disabled={cancelLoading}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 disabled:opacity-50"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-bold text-amber-800">
+                Before you cancel
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-amber-700">
+                Customer cancellation is available while the
+                order is Pending or Confirmed.
+              </p>
+            </div>
+
+            <div className="mt-5 rounded-2xl bg-[#faf9f6] p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-500">
+                  Order Total
+                </span>
+
+                <span className="text-lg font-bold text-[#5c4033]">
+                  ₹
+                  {formatPrice(
+                    cancelOrder.total_amount
+                  )}
+                </span>
+              </div>
+
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-sm text-zinc-500">
+                  Customer Cancellation Charge
+                </span>
+
+                <span className="text-sm font-bold text-green-700">
+                  ₹0
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <label
+                htmlFor="cancelReason"
+                className="mb-2 block text-sm font-bold text-zinc-900"
+              >
+                Cancellation Reason
+              </label>
+
+              <textarea
+                id="cancelReason"
+                value={cancelReason}
+                onChange={(e) =>
+                  setCancelReason(e.target.value)
+                }
+                rows={4}
+                maxLength={500}
+                placeholder="Please tell us why you want to cancel this order..."
+                disabled={cancelLoading}
+                className="w-full resize-none rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-[#5c4033] focus:ring-2 focus:ring-[#eee8dc] disabled:bg-zinc-50"
+              />
+
+              <p className="mt-1 text-right text-[11px] text-zinc-400">
+                {cancelReason.length}/500
+              </p>
+            </div>
+
+            {error && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                disabled={cancelLoading}
+                className="rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCustomerCancelOrder}
+                disabled={cancelLoading}
+                className="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {cancelLoading
+                  ? "Canceling..."
+                  : "Confirm Cancellation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
+
 export default function AccountPage() {
   return (
     <Suspense
@@ -1613,6 +1962,7 @@ export default function AccountPage() {
         <main className="flex min-h-screen items-center justify-center bg-[#faf9f6]">
           <div className="text-center">
             <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#5c4033] border-t-transparent" />
+
             <p className="mt-4 text-sm text-[#6b5a4d]">
               Loading account...
             </p>
