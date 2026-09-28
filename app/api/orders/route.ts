@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -102,10 +103,7 @@ function isValidStatusTransition(
     return false;
   }
 
-  const allowedTransitions: Record<
-    string,
-    OrderStatus[]
-  > = {
+  const allowedTransitions: Record<string, OrderStatus[]> = {
     pending: ["confirmed", "canceled"],
     confirmed: ["out_for_delivery", "canceled"],
     out_for_delivery: ["delivered", "canceled"],
@@ -182,9 +180,7 @@ function isAdmin(user: {
     return false;
   }
 
-  return (
-    user.email?.trim().toLowerCase() === adminEmail
-  );
+  return user.email?.trim().toLowerCase() === adminEmail;
 }
 
 /* =========================================================
@@ -192,10 +188,7 @@ function isAdmin(user: {
 ========================================================= */
 
 function normalizeIndianPhone(phone: string) {
-  const cleanPhone = String(phone || "").replace(
-    /\D/g,
-    ""
-  );
+  const cleanPhone = String(phone || "").replace(/\D/g, "");
 
   if (!cleanPhone) {
     return "";
@@ -251,8 +244,7 @@ async function sendWhatsAppUpdate({
     return;
   }
 
-  const cleanPhone =
-    normalizeIndianPhone(phone);
+  const cleanPhone = normalizeIndianPhone(phone);
 
   if (!cleanPhone) {
     console.log(
@@ -363,8 +355,7 @@ async function sendWhatsAppPaymentUpdate({
     return;
   }
 
-  const cleanPhone =
-    normalizeIndianPhone(phone);
+  const cleanPhone = normalizeIndianPhone(phone);
 
   if (!cleanPhone) {
     console.log(
@@ -406,9 +397,7 @@ async function sendWhatsAppPaymentUpdate({
                   },
                   {
                     type: "text",
-                    text: formatPaymentStatus(
-                      paymentStatus
-                    ),
+                    text: formatPaymentStatus(paymentStatus),
                   },
                 ],
               },
@@ -442,6 +431,32 @@ async function sendWhatsAppPaymentUpdate({
 }
 
 /* =========================================================
+   GMAIL SMTP
+========================================================= */
+
+function getEmailTransporter() {
+  const gmailUser = process.env.GMAIL_USER?.trim();
+  const gmailAppPassword =
+    process.env.GMAIL_APP_PASSWORD?.trim();
+
+  if (!gmailUser || !gmailAppPassword) {
+    console.log(
+      "Email skipped: GMAIL_USER or GMAIL_APP_PASSWORD missing."
+    );
+
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: gmailUser,
+      pass: gmailAppPassword.replace(/\s/g, ""),
+    },
+  });
+}
+
+/* =========================================================
    EMAIL
 ========================================================= */
 
@@ -454,15 +469,16 @@ async function sendEmailNotification({
   subject: string;
   html: string;
 }) {
-  const apiKey =
-    process.env.RESEND_API_KEY;
+  const gmailUser =
+    process.env.GMAIL_USER?.trim();
 
-  const from =
-    process.env.EMAIL_FROM;
+  const emailFrom =
+    process.env.EMAIL_FROM?.trim() ||
+    "Dayal Kitchen Ware";
 
-  if (!apiKey || !from) {
+  if (!gmailUser) {
     console.log(
-      "Email skipped: RESEND_API_KEY or EMAIL_FROM missing."
+      "Email skipped: GMAIL_USER missing."
     );
 
     return;
@@ -476,38 +492,46 @@ async function sendEmailNotification({
     return;
   }
 
+  const transporter = getEmailTransporter();
+
+  if (!transporter) {
+    return;
+  }
+
+  /*
+    EMAIL_FROM can be:
+
+    Dayal Kitchen Ware
+
+    OR
+
+    Dayal Kitchen Ware <your@gmail.com>
+
+    If only a name is provided, Gmail account is used
+    as the sender email.
+  */
+
+  const from =
+    emailFrom.includes("<") &&
+    emailFrom.includes(">")
+      ? emailFrom
+      : `"${emailFrom}" <${gmailUser}>`;
+
   try {
-    const response = await fetch(
-      "https://api.resend.com/emails",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from,
-          to: [to],
-          subject,
-          html,
-        }),
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error(
-        "EMAIL API ERROR:",
-        JSON.stringify(result)
-      );
-
-      return;
-    }
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+    });
 
     console.log(
       "EMAIL SENT:",
-      JSON.stringify(result)
+      JSON.stringify({
+        messageId: info.messageId,
+        to,
+        subject,
+      })
     );
   } catch (error) {
     console.error(
@@ -1572,9 +1596,7 @@ export async function PATCH(
 
                 <p>
                   <strong>Cancellation Reason:</strong>
-                  ${escapeHtml(
-                    reason
-                  )}
+                  ${escapeHtml(reason)}
                 </p>
 
                 <p>
@@ -1614,9 +1636,7 @@ export async function PATCH(
 
               <p>
                 <strong>Cancellation Reason:</strong>
-                ${escapeHtml(
-                  reason
-                )}
+                ${escapeHtml(reason)}
               </p>
 
               <p>
@@ -1812,8 +1832,7 @@ export async function PATCH(
       );
     }
 
-    const updateData:
-      Record<string, unknown> = {
+    const updateData: Record<string, unknown> = {
       order_status:
         requestedStatus,
 
@@ -1990,9 +2009,7 @@ export async function PATCH(
             ₹${Number(
               updatedOrder.cancellation_charge ||
                 0
-            ).toLocaleString(
-              "en-IN"
-            )}
+            ).toLocaleString("en-IN")}
           </p>
         `;
       } else {
