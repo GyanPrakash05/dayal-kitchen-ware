@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { supabase } from "@/app/lib/supabase";
@@ -111,13 +112,17 @@ const PAYMENT_OPTIONS: {
    HELPERS
 ========================================================= */
 
-function formatPrice(value: number | null | undefined) {
+function formatPrice(
+  value: number | null | undefined
+) {
   const amount = Number(value || 0);
 
   return `₹${amount.toLocaleString("en-IN")}`;
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(
+  value: string | null | undefined
+) {
   if (!value) return "—";
 
   const date = new Date(value);
@@ -284,6 +289,129 @@ function openWhatsApp(
 }
 
 /* =========================================================
+   NEW ORDER NOTIFICATION SOUND
+========================================================= */
+
+function playNewOrderSound() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (
+        window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }
+      ).webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return;
+    }
+
+    const audioContext =
+      new AudioContextClass();
+
+    const oscillator =
+      audioContext.createOscillator();
+
+    const gain =
+      audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(
+      880,
+      audioContext.currentTime
+    );
+
+    oscillator.frequency.setValueAtTime(
+      660,
+      audioContext.currentTime + 0.15
+    );
+
+    oscillator.frequency.setValueAtTime(
+      880,
+      audioContext.currentTime + 0.3
+    );
+
+    gain.gain.setValueAtTime(
+      0.0001,
+      audioContext.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.18,
+      audioContext.currentTime + 0.02
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      audioContext.currentTime + 0.5
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+
+    oscillator.stop(
+      audioContext.currentTime + 0.55
+    );
+
+    oscillator.onended = () => {
+      audioContext.close().catch(() => {});
+    };
+  } catch (error) {
+    console.warn(
+      "Notification sound could not be played:",
+      error
+    );
+  }
+}
+
+/* =========================================================
+   BROWSER NOTIFICATION
+========================================================= */
+
+function showBrowserNotification(
+  order: Order
+) {
+  try {
+    if (
+      typeof window === "undefined" ||
+      !("Notification" in window)
+    ) {
+      return;
+    }
+
+    if (
+      Notification.permission !== "granted"
+    ) {
+      return;
+    }
+
+    const orderId = String(order.id)
+      .slice(0, 8)
+      .toUpperCase();
+
+    new Notification(
+      "New Order Received",
+      {
+        body:
+          `Order #${orderId}\n` +
+          `${order.customer_name || "Customer"} • ` +
+          `${formatPrice(
+            order.total_amount
+          )}`,
+        icon: "/favicon.ico",
+      }
+    );
+  } catch (error) {
+    console.warn(
+      "Browser notification failed:",
+      error
+    );
+  }
+}
+
+/* =========================================================
    MAIN COMPONENT
 ========================================================= */
 
@@ -332,6 +460,14 @@ export default function AdminOrdersPage() {
   const [updatingOrderId, setUpdatingOrderId] =
     useState<string | null>(null);
 
+    const [realtimeStatus, setRealtimeStatus] =
+  useState<
+    "CONNECTING" | "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED"
+  >("CONNECTING");
+
+  const toastTimerRef =
+    useRef<number | null>(null);
+
   /* =======================================================
      TOAST
   ======================================================= */
@@ -340,12 +476,67 @@ export default function AdminOrdersPage() {
     (message: string) => {
       setToast(message);
 
-      window.setTimeout(() => {
-        setToast("");
-      }, 3500);
+      if (toastTimerRef.current) {
+        window.clearTimeout(
+          toastTimerRef.current
+        );
+      }
+
+      toastTimerRef.current =
+        window.setTimeout(() => {
+          setToast("");
+        }, 5000);
     },
     []
   );
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(
+          toastTimerRef.current
+        );
+      }
+    };
+  }, []);
+
+  /* =======================================================
+     ENABLE BROWSER NOTIFICATIONS
+  ======================================================= */
+
+  const enableBrowserNotifications =
+    async () => {
+      try {
+        if (
+          typeof window === "undefined" ||
+          !("Notification" in window)
+        ) {
+          showToast(
+            "Browser notifications are not supported."
+          );
+          return;
+        }
+
+        const permission =
+          await Notification.requestPermission();
+
+        if (permission === "granted") {
+          showToast(
+            "Browser notifications enabled."
+          );
+        } else {
+          showToast(
+            "Browser notifications are disabled."
+          );
+        }
+      } catch (error) {
+        console.error(error);
+
+        showToast(
+          "Unable to enable browser notifications."
+        );
+      }
+    };
 
   /* =======================================================
      GET ORDERS
@@ -422,6 +613,103 @@ export default function AdminOrdersPage() {
     getOrders();
   }, [getOrders]);
 
+   /* =======================================================
+     SUPABASE REALTIME - NEW ORDERS
+  ======================================================= */
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const channel = supabase
+      .channel("admin-orders-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "orders",
+        },
+        async (payload) => {
+          if (!isMounted) {
+            return;
+          }
+
+          console.log(
+            "🔔 New order received from Supabase Realtime:",
+            payload
+          );
+
+          const newOrder =
+            payload.new as Partial<Order>;
+
+          const orderId = String(
+            newOrder.id || ""
+          )
+            .slice(0, 8)
+            .toUpperCase();
+
+          /*
+           * Show instant admin notification
+           */
+          showToast(
+            `🔔 New Order Received #${orderId}`
+          );
+
+          /*
+           * Play notification sound
+           */
+          playNewOrderSound();
+
+          /*
+           * Browser notification
+           */
+          if (
+            newOrder.id &&
+            newOrder.customer_name &&
+            newOrder.total_amount !== undefined
+          ) {
+            showBrowserNotification(
+              newOrder as Order
+            );
+          }
+
+          /*
+           * Fetch complete order data from
+           * authenticated API.
+           *
+           * This keeps the existing API/RLS/security
+           * flow intact instead of trusting the realtime
+           * payload for the complete admin order object.
+           */
+          await getOrders(true);
+        }
+      )
+      .subscribe((status) => {
+        if (!isMounted) {
+          return;
+        }
+
+        console.log(
+          "Orders realtime status:",
+          status
+        );
+
+        setRealtimeStatus(
+          status as
+            | "CONNECTING"
+            | "SUBSCRIBED"
+            | "CHANNEL_ERROR"
+            | "TIMED_OUT"
+            | "CLOSED"
+        );
+      });
+
+    return () => {
+      isMounted = false;
+
+      supabase.removeChannel(channel);
+    };
+  }, [getOrders, showToast]);
   /* =======================================================
      UPDATE ORDER STATUS
   ======================================================= */
@@ -795,26 +1083,86 @@ export default function AdminOrdersPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              getOrders(true)
-            }
-            disabled={refreshing}
-            className="rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {refreshing
-              ? "Refreshing..."
-              : "Refresh Orders"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={
+                enableBrowserNotifications
+              }
+              className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
+            >
+              🔔 Notifications
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                getOrders(true)
+              }
+              disabled={refreshing}
+              className="rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {refreshing
+                ? "Refreshing..."
+                : "Refresh Orders"}
+            </button>
+          </div>
         </header>
+
+        {/* =================================================
+            REALTIME STATUS
+        ================================================= */}
+
+        <div
+  className={`flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+    realtimeStatus === "SUBSCRIBED"
+      ? "border-green-200 bg-green-50 text-green-800"
+      : realtimeStatus === "CONNECTING"
+      ? "border-yellow-200 bg-yellow-50 text-yellow-800"
+      : "border-red-200 bg-red-50 text-red-800"
+  }`}
+>
+  <span
+    className={`h-2.5 w-2.5 rounded-full ${
+      realtimeStatus === "SUBSCRIBED"
+        ? "bg-green-500"
+        : realtimeStatus === "CONNECTING"
+        ? "bg-yellow-500"
+        : "bg-red-500"
+    }`}
+  />
+
+  <span className="font-medium">
+    {realtimeStatus === "SUBSCRIBED"
+      ? "Live order notifications active"
+      : realtimeStatus === "CONNECTING"
+      ? "Connecting to live order notifications..."
+      : "Live order notifications disconnected"}
+  </span>
+
+  <span
+    className={
+      realtimeStatus === "SUBSCRIBED"
+        ? "text-green-700"
+        : realtimeStatus === "CONNECTING"
+        ? "text-yellow-700"
+        : "text-red-700"
+    }
+  >
+    {realtimeStatus === "SUBSCRIBED"
+      ? "— new orders will appear automatically."
+      : realtimeStatus === "CONNECTING"
+      ? "— please wait."
+      : "— check your Supabase Realtime configuration."}
+  </span>
+</div>
 
         {/* =================================================
             TOAST
         ================================================= */}
 
         {toast && (
-          <div className="fixed right-4 top-4 z-[100] rounded-xl bg-black px-5 py-3 text-sm font-medium text-white shadow-xl">
+          <div className="fixed right-4 top-4 z-[100] max-w-sm rounded-xl bg-black px-5 py-3 text-sm font-medium text-white shadow-xl">
             {toast}
           </div>
         )}
@@ -924,7 +1272,7 @@ export default function AdminOrdersPage() {
                 )
               }
               placeholder="Search order, customer, phone, city..."
-              className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-black"
+              className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-black"
             />
 
             <select
@@ -936,7 +1284,7 @@ export default function AdminOrdersPage() {
                     | OrderStatus
                 )
               }
-              className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="all">
                 All Order Statuses
@@ -963,7 +1311,7 @@ export default function AdminOrdersPage() {
                     | PaymentStatus
                 )
               }
-              className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="all">
                 All Payment Statuses
@@ -1401,7 +1749,7 @@ function OrderCard({
                     .value as OrderStatus
                 )
               }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:cursor-not-allowed disabled:bg-gray-100"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-500"
             >
               {STATUS_OPTIONS.map(
                 (option) => (
@@ -1433,7 +1781,7 @@ function OrderCard({
                     .value as PaymentStatus
                 )
               }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:cursor-not-allowed disabled:bg-gray-100"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-500"
             >
               {PAYMENT_OPTIONS.map(
                 (option) => (
@@ -1760,7 +2108,7 @@ function OrderDetailsModal({
                       .value as OrderStatus
                   )
                 }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:bg-gray-100"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-500"
               >
                 {STATUS_OPTIONS.map(
                   (option) => (
@@ -1798,7 +2146,7 @@ function OrderDetailsModal({
                       .value as PaymentStatus
                   )
                 }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black disabled:bg-gray-100"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-500"
               >
                 {PAYMENT_OPTIONS.map(
                   (option) => (
@@ -1924,7 +2272,7 @@ function CancellationModal({
             }
             rows={4}
             placeholder="Enter cancellation reason..."
-            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none focus:border-black"
           />
         </div>
 
@@ -1947,12 +2295,11 @@ function CancellationModal({
               )
             }
             placeholder="0"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none focus:border-black"
           />
 
           <p className="mt-1 text-xs text-gray-500">
-            Maximum:
-            {" "}
+            Maximum:{" "}
             {formatPrice(
               order.total_amount
             )}
