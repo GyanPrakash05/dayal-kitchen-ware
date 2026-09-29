@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import MobileBackHandler from "@/app/components/MobileBackHandler";
 import ProductGallery from "@/app/components/ProductGallery";
 import AddToCartButton from "@/app/components/AddToCartButton";
 
@@ -54,10 +56,8 @@ export async function generateMetadata({
   if (error || !product) {
     return {
       title: "Product Not Found | Dayal Kitchen Ware",
-
       description:
         "The requested product could not be found.",
-
       robots: {
         index: false,
         follow: false,
@@ -98,15 +98,10 @@ export async function generateMetadata({
 
     openGraph: {
       title: `${product.name} | Dayal Kitchen Ware`,
-
       description,
-
       url: productUrl,
-
       siteName: "Dayal Kitchen Ware",
-
       type: "website",
-
       locale: "en_IN",
 
       images: product.image
@@ -121,9 +116,7 @@ export async function generateMetadata({
 
     twitter: {
       card: "summary_large_image",
-
       title: `${product.name} | Dayal Kitchen Ware`,
-
       description,
 
       images: product.image
@@ -312,23 +305,22 @@ export default async function ProductPage({
   }
 
   /* =======================================================
-     SAFE VALUES FOR COMPONENTS
+     SAFE VALUES
   ======================================================= */
 
   const productImage =
     product.image ?? null;
 
   const productImages =
-    product.images ?? null;
+    Array.isArray(product.images)
+      ? product.images
+      : null;
 
   const productPrice =
     Number(product.price);
 
   const productName =
     product.name ?? "Product";
-
-  const productSlug =
-    product.slug ?? id;
 
   /* =======================================================
      WHATSAPP
@@ -357,6 +349,12 @@ Please share more details and availability.`;
     <main className="min-h-screen bg-[#faf9f6] text-zinc-900">
 
       {/* =====================================================
+          ANDROID BACK HANDLER
+      ===================================================== */}
+
+      <MobileBackHandler />
+
+      {/* =====================================================
           STRUCTURED DATA
       ===================================================== */}
 
@@ -374,11 +372,10 @@ Please share more details and availability.`;
 
           {/* LOGO */}
 
-          <a
+          <Link
             href="/"
             className="block"
           >
-
             <h1 className="text-lg font-bold sm:text-xl">
               DAYAL KITCHEN WARE
             </h1>
@@ -386,17 +383,16 @@ Please share more details and availability.`;
             <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-500 sm:text-[10px]">
               Kitchen • Home • Lifestyle
             </p>
-
-          </a>
+          </Link>
 
           {/* BACK BUTTON */}
 
-          <a
+          <Link
             href="/#products"
             className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
           >
             ← Back to Products
-          </a>
+          </Link>
 
         </div>
 
@@ -458,12 +454,10 @@ Please share more details and availability.`;
                 product.old_price !== undefined &&
                 Number(product.old_price) >
                   productPrice && (
-
-                <span className="text-lg text-zinc-400 line-through">
-                  ₹{Number(product.old_price)}
-                </span>
-
-              )}
+                  <span className="text-lg text-zinc-400 line-through">
+                    ₹{Number(product.old_price)}
+                  </span>
+                )}
 
             </div>
 
@@ -500,26 +494,26 @@ Please share more details and availability.`;
 
               {/* ADD TO CART */}
 
-             <AddToCartButton
-  product={{
-    id: product.id,
-    name: product.name,
-    slug: product.slug,
-    price: Number(product.price),
-    image: product.image,
-  }}
-/>
+              <AddToCartButton
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  slug: product.slug,
+                  price: Number(product.price),
+                  image: product.image,
+                }}
+              />
 
             </div>
 
             {/* CONTINUE SHOPPING */}
 
-            <a
+            <Link
               href="/#products"
               className="mt-4 block rounded-full border border-zinc-300 bg-white px-8 py-4 text-center font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
             >
               Continue Shopping
-            </a>
+            </Link>
 
           </div>
 

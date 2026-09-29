@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type ProductGalleryProps = {
   name: string;
@@ -23,34 +23,62 @@ export default function ProductGallery({
       ? [image]
       : [];
 
-  const [selectedImage, setSelectedImage] = useState(
+  const [selectedImage, setSelectedImage] = useState<string | null>(
     productImages[0] ?? null
   );
 
+  useEffect(() => {
+    setSelectedImage(productImages[0] ?? null);
+  }, [images, image]);
+
   if (productImages.length === 0 || !selectedImage) {
     return (
-      <div className="flex h-[400px] items-center justify-center rounded-[2rem] bg-[#eee8dc] sm:h-[500px]">
+      <div className="flex min-h-[380px] w-full items-center justify-center overflow-hidden rounded-[2rem] bg-[#eee8dc] sm:min-h-[500px]">
         <span className="text-8xl">🍳</span>
       </div>
     );
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {/* MAIN IMAGE */}
 
-      <div className="relative flex h-[380px] w-full items-center justify-center overflow-hidden rounded-[2rem] bg-[#eee8dc] sm:h-[500px]">
+      <div
+        className="
+          relative
+          flex
+          h-[380px]
+          w-full
+          items-center
+          justify-center
+          overflow-hidden
+          rounded-[2rem]
+          bg-[#eee8dc]
+          sm:h-[500px]
+        "
+      >
         <img
           src={selectedImage}
           alt={name}
-          className="h-full w-full object-contain p-8 sm:p-12"
+          loading="eager"
+          decoding="async"
+          className="
+            block
+            h-full
+            w-full
+            min-h-0
+            min-w-0
+            object-contain
+            p-6
+            sm:p-10
+          "
         />
       </div>
 
       {/* THUMBNAILS */}
 
       {productImages.length > 1 && (
-        <div className="mt-4 flex w-full gap-3 overflow-x-auto pb-3">
+        <div className="mt-4 flex w-full min-w-0 gap-3 overflow-x-auto pb-3">
           {productImages.map((img, index) => {
             const active = selectedImage === img;
 
@@ -59,16 +87,32 @@ export default function ProductGallery({
                 key={`${img}-${index}`}
                 type="button"
                 onClick={() => setSelectedImage(img)}
-                className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-[#eee8dc] transition sm:h-24 sm:w-24 ${
-                  active
-                    ? "border-zinc-900"
-                    : "border-zinc-200 hover:border-zinc-400"
-                }`}
+                aria-label={`View ${name} image ${index + 1}`}
+                className={`
+                  relative
+                  h-20
+                  w-20
+                  shrink-0
+                  overflow-hidden
+                  rounded-xl
+                  border-2
+                  bg-[#eee8dc]
+                  transition
+                  sm:h-24
+                  sm:w-24
+                  ${
+                    active
+                      ? "border-zinc-900"
+                      : "border-zinc-200 hover:border-zinc-400"
+                  }
+                `}
               >
                 <img
                   src={img}
                   alt={`${name} image ${index + 1}`}
-                  className="h-full w-full object-contain p-2"
+                  loading="lazy"
+                  decoding="async"
+                  className="block h-full w-full object-contain p-2"
                 />
 
                 {index === 0 && (
