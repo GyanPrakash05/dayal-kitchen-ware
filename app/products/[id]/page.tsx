@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 import type { Metadata } from "next";
 import Link from "next/link";
-
 import MobileBackHandler from "@/app/components/MobileBackHandler";
 import ProductGallery from "@/app/components/ProductGallery";
 import AddToCartButton from "@/app/components/AddToCartButton";
@@ -47,17 +46,14 @@ export async function generateMetadata({
 
   const { data: product, error } = await supabase
     .from("products")
-    .select(
-      "name, description, image, price, category, slug, brand"
-    )
+    .select("name, description, image, price, category, slug, brand")
     .eq("slug", id)
     .single();
 
   if (error || !product) {
     return {
       title: "Product Not Found | Dayal Kitchen Ware",
-      description:
-        "The requested product could not be found.",
+      description: "The requested product could not be found.",
       robots: {
         index: false,
         follow: false,
@@ -65,11 +61,8 @@ export async function generateMetadata({
     };
   }
 
-  const baseUrl =
-    "https://dayal-kitchen-ware.vercel.app";
-
-  const productUrl =
-    `${baseUrl}/products/${product.slug}`;
+  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
+  const productUrl = `${baseUrl}/products/${product.slug}`;
 
   const description =
     product.description?.slice(0, 160) ||
@@ -77,7 +70,6 @@ export async function generateMetadata({
 
   return {
     title: `${product.name} | Dayal Kitchen Ware`,
-
     description,
 
     keywords: [
@@ -118,10 +110,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: `${product.name} | Dayal Kitchen Ware`,
       description,
-
-      images: product.image
-        ? [product.image]
-        : [],
+      images: product.image ? [product.image] : [],
     },
 
     robots: {
@@ -148,15 +137,11 @@ function ProductSchema({
 }: {
   product: any;
 }) {
-  const baseUrl =
-    "https://dayal-kitchen-ware.vercel.app";
-
-  const productUrl =
-    `${baseUrl}/products/${product.slug}`;
+  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
+  const productUrl = `${baseUrl}/products/${product.slug}`;
 
   const schema = {
     "@context": "https://schema.org",
-
     "@type": "Product",
 
     name: product.name,
@@ -167,9 +152,7 @@ function ProductSchema({
       product.description ||
       `Buy ${product.name} from Dayal Kitchen Ware.`,
 
-    image: product.image
-      ? [product.image]
-      : [],
+    image: product.image ? [product.image] : [],
 
     url: productUrl,
 
@@ -184,24 +167,17 @@ function ProductSchema({
 
     offers: {
       "@type": "Offer",
-
       url: productUrl,
-
       priceCurrency: "INR",
-
       price: Number(product.price),
 
-      availability:
-        "https://schema.org/InStock",
+      availability: "https://schema.org/InStock",
 
-      itemCondition:
-        "https://schema.org/NewCondition",
+      itemCondition: "https://schema.org/NewCondition",
 
       seller: {
         "@type": "Organization",
-
         name: "Dayal Kitchen Ware",
-
         url: baseUrl,
       },
     },
@@ -226,45 +202,32 @@ function BreadcrumbSchema({
 }: {
   product: any;
 }) {
-  const baseUrl =
-    "https://dayal-kitchen-ware.vercel.app";
-
-  const productUrl =
-    `${baseUrl}/products/${product.slug}`;
+  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
+  const productUrl = `${baseUrl}/products/${product.slug}`;
 
   const schema = {
     "@context": "https://schema.org",
-
     "@type": "BreadcrumbList",
 
     itemListElement: [
       {
         "@type": "ListItem",
-
         position: 1,
-
         name: "Home",
-
         item: `${baseUrl}/`,
       },
 
       {
         "@type": "ListItem",
-
         position: 2,
-
         name: "Products",
-
         item: `${baseUrl}/#products`,
       },
 
       {
         "@type": "ListItem",
-
         position: 3,
-
         name: product.name,
-
         item: productUrl,
       },
     ],
@@ -296,11 +259,7 @@ export default async function ProductPage({
     .single();
 
   if (error || !product) {
-    console.error(
-      "PRODUCT DETAIL ERROR:",
-      error
-    );
-
+    console.error("PRODUCT DETAIL ERROR:", error);
     notFound();
   }
 
@@ -308,19 +267,15 @@ export default async function ProductPage({
      SAFE VALUES
   ======================================================= */
 
-  const productImage =
-    product.image ?? null;
+  const productImage = product.image ?? null;
 
-  const productImages =
-    Array.isArray(product.images)
-      ? product.images
-      : null;
+  const productImages = Array.isArray(product.images)
+    ? product.images
+    : null;
 
-  const productPrice =
-    Number(product.price);
+  const productPrice = Number(product.price);
 
-  const productName =
-    product.name ?? "Product";
+  const productName = product.name ?? "Product";
 
   /* =======================================================
      WHATSAPP
@@ -336,17 +291,16 @@ Price: ₹${productPrice}
 
 Please share more details and availability.`;
 
-  const whatsappLink =
-    `https://wa.me/917011872380?text=${encodeURIComponent(
-      whatsappMessage
-    )}`;
+  const whatsappLink = `https://wa.me/917011872380?text=${encodeURIComponent(
+    whatsappMessage
+  )}`;
 
   /* =======================================================
      PAGE
   ======================================================= */
 
   return (
-    <main className="min-h-screen bg-[#faf9f6] text-zinc-900">
+    <main className="min-h-screen overflow-x-clip bg-[#faf9f6] text-zinc-900">
 
       {/* =====================================================
           ANDROID BACK HANDLER
@@ -368,28 +322,27 @@ Please share more details and availability.`;
 
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 backdrop-blur">
 
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
 
           {/* LOGO */}
 
-          <Link
-            href="/"
-            className="block"
-          >
-            <h1 className="text-lg font-bold sm:text-xl">
+          <Link href="/" className="block min-w-0">
+
+            <h1 className="text-base font-bold sm:text-xl">
               DAYAL KITCHEN WARE
             </h1>
 
-            <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-500 sm:text-[10px]">
+            <p className="text-[8px] uppercase tracking-[0.2em] text-zinc-500 sm:text-[10px] sm:tracking-[0.25em]">
               Kitchen • Home • Lifestyle
             </p>
+
           </Link>
 
           {/* BACK BUTTON */}
 
           <Link
             href="/#products"
-            className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
+            className="shrink-0 rounded-full bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-amber-700 sm:px-5 sm:text-sm"
           >
             ← Back to Products
           </Link>
@@ -403,7 +356,8 @@ Please share more details and availability.`;
       ===================================================== */}
 
       <section className="w-full max-w-full overflow-x-clip px-4 py-8 sm:px-6 sm:py-12 lg:mx-auto lg:max-w-7xl lg:px-8 lg:py-24">
-  <div className="grid w-full min-w-0 max-w-full gap-10 lg:grid-cols-2 lg:gap-16">
+
+        <div className="grid w-full min-w-0 max-w-full gap-10 lg:grid-cols-2 lg:gap-16">
 
           {/* =================================================
               PRODUCT GALLERY
@@ -419,7 +373,7 @@ Please share more details and availability.`;
               PRODUCT DETAILS
           ================================================= */}
 
-          <div className="flex flex-col justify-center">
+          <div className="flex min-w-0 flex-col justify-center">
 
             {/* BADGE */}
 
@@ -431,19 +385,21 @@ Please share more details and availability.`;
 
             {/* CATEGORY */}
 
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-              {product.category}
-            </p>
+            {product.category && (
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
+                {product.category}
+              </p>
+            )}
 
             {/* PRODUCT NAME */}
 
-            <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="mt-4 break-words text-3xl font-bold tracking-tight sm:text-5xl">
               {productName}
             </h1>
 
             {/* PRICE */}
 
-            <div className="mt-6 flex items-center gap-4">
+            <div className="mt-6 flex flex-wrap items-center gap-4">
 
               <span className="text-3xl font-bold">
                 ₹{productPrice}
@@ -451,8 +407,7 @@ Please share more details and availability.`;
 
               {product.old_price !== null &&
                 product.old_price !== undefined &&
-                Number(product.old_price) >
-                  productPrice && (
+                Number(product.old_price) > productPrice && (
                   <span className="text-lg text-zinc-400 line-through">
                     ₹{Number(product.old_price)}
                   </span>
@@ -462,17 +417,19 @@ Please share more details and availability.`;
 
             {/* DESCRIPTION */}
 
-            <div className="mt-8">
+            {product.description && (
+              <div className="mt-8">
 
-              <h2 className="text-lg font-bold">
-                Product Description
-              </h2>
+                <h2 className="text-lg font-bold">
+                  Product Description
+                </h2>
 
-              <p className="mt-3 whitespace-pre-line text-lg leading-8 text-zinc-600">
-                {product.description}
-              </p>
+                <p className="mt-3 whitespace-pre-line break-words text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
+                  {product.description}
+                </p>
 
-            </div>
+              </div>
+            )}
 
             {/* =================================================
                 ACTION BUTTONS

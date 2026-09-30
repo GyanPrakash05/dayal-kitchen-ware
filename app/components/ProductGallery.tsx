@@ -13,14 +13,17 @@ export default function ProductGallery({
   image,
   images,
 }: ProductGalleryProps) {
+  /* =========================================================
+     PRODUCT IMAGES
+  ========================================================= */
+
   const productImages = useMemo(() => {
-    const validImages =
-      Array.isArray(images)
-        ? images.filter(
-            (img): img is string =>
-              typeof img === "string" && img.trim().length > 0
-          )
-        : [];
+    const validImages = Array.isArray(images)
+      ? images.filter(
+          (img): img is string =>
+            typeof img === "string" && img.trim().length > 0
+        )
+      : [];
 
     if (validImages.length > 0) {
       return validImages;
@@ -28,6 +31,10 @@ export default function ProductGallery({
 
     return image ? [image] : [];
   }, [images, image]);
+
+  /* =========================================================
+     SELECTED IMAGE
+  ========================================================= */
 
   const [selectedImage, setSelectedImage] = useState<string | null>(
     productImages[0] ?? null
@@ -39,21 +46,28 @@ export default function ProductGallery({
 
   /* =========================================================
      NO IMAGE
-     ========================================================= */
+  ========================================================= */
 
   if (productImages.length === 0 || !selectedImage) {
     return (
       <div className="flex min-h-[320px] w-full max-w-full min-w-0 items-center justify-center overflow-hidden rounded-[2rem] bg-[#eee8dc] sm:min-h-[500px]">
-        <span className="text-7xl sm:text-8xl">🍳</span>
+        <span className="text-7xl sm:text-8xl">
+          🍳
+        </span>
       </div>
     );
   }
 
+  /* =========================================================
+     GALLERY
+  ========================================================= */
+
   return (
     <div className="w-full max-w-full min-w-0 overflow-hidden">
+
       {/* =====================================================
           MAIN IMAGE
-          ===================================================== */}
+      ===================================================== */}
 
       <div
         className="
@@ -71,6 +85,7 @@ export default function ProductGallery({
           sm:h-[500px]
         "
       >
+
         <img
           src={selectedImage}
           alt={name}
@@ -87,14 +102,16 @@ export default function ProductGallery({
             sm:p-10
           "
         />
+
       </div>
 
       {/* =====================================================
           THUMBNAILS
-          ===================================================== */}
+      ===================================================== */}
 
       {productImages.length > 1 && (
         <div className="mt-4 flex w-full max-w-full min-w-0 gap-3 overflow-x-auto overscroll-x-contain pb-3">
+
           {productImages.map((img, index) => {
             const active = selectedImage === img;
 
@@ -123,6 +140,7 @@ export default function ProductGallery({
                   }
                 `}
               >
+
                 <img
                   src={img}
                   alt={`${name} image ${index + 1}`}
@@ -131,26 +149,31 @@ export default function ProductGallery({
                   className="block h-full w-full max-w-full object-contain p-2"
                 />
 
+                {/* MAIN LABEL */}
+
                 {index === 0 && (
                   <span className="absolute bottom-1 left-1 rounded bg-zinc-900 px-1.5 py-0.5 text-[8px] font-bold text-white">
                     MAIN
                   </span>
                 )}
+
               </button>
             );
           })}
+
         </div>
       )}
 
       {/* =====================================================
           IMAGE COUNT
-          ===================================================== */}
+      ===================================================== */}
 
       {productImages.length > 1 && (
         <p className="mt-2 w-full max-w-full text-center text-xs text-zinc-400">
           {productImages.length} images
         </p>
       )}
+
     </div>
   );
 }
