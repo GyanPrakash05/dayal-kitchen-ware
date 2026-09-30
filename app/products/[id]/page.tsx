@@ -14,10 +14,6 @@ type ProductPageProps = {
   }>;
 };
 
-/* =========================================================
-   STATIC PRODUCT PATHS
-========================================================= */
-
 export async function generateStaticParams() {
   const { data: products, error } = await supabase
     .from("products")
@@ -34,10 +30,6 @@ export async function generateStaticParams() {
     })) || []
   );
 }
-
-/* =========================================================
-   SEO METADATA
-========================================================= */
 
 export async function generateMetadata({
   params,
@@ -128,10 +120,6 @@ export async function generateMetadata({
   };
 }
 
-/* =========================================================
-   PRODUCT SCHEMA
-========================================================= */
-
 function ProductSchema({
   product,
 }: {
@@ -139,6 +127,43 @@ function ProductSchema({
 }) {
   const baseUrl = "https://dayal-kitchen-ware.vercel.app";
   const productUrl = `${baseUrl}/products/${product.slug}`;
+
+  const additionalProperties = [
+    {
+      name: "Material",
+      value: product.material,
+    },
+    {
+      name: "Size",
+      value: product.size,
+    },
+    {
+      name: "Capacity",
+      value: product.capacity,
+    },
+    {
+      name: "Colour",
+      value: product.colour,
+    },
+    {
+      name: "Warranty",
+      value: product.warranty,
+    },
+    {
+      name: "Model Number",
+      value: product.model_number,
+    },
+  ]
+    .filter(
+      (item) =>
+        typeof item.value === "string" &&
+        item.value.trim().length > 0
+    )
+    .map((item) => ({
+      "@type": "PropertyValue",
+      name: item.name,
+      value: item.value,
+    }));
 
   const schema = {
     "@context": "https://schema.org",
@@ -162,6 +187,12 @@ function ProductSchema({
             "@type": "Brand",
             name: product.brand,
           },
+        }
+      : {}),
+
+    ...(additionalProperties.length > 0
+      ? {
+          additionalProperty: additionalProperties,
         }
       : {}),
 
@@ -192,10 +223,6 @@ function ProductSchema({
     />
   );
 }
-
-/* =========================================================
-   BREADCRUMB SCHEMA
-========================================================= */
 
 function BreadcrumbSchema({
   product,
@@ -243,10 +270,6 @@ function BreadcrumbSchema({
   );
 }
 
-/* =========================================================
-   PRODUCT PAGE
-========================================================= */
-
 export default async function ProductPage({
   params,
 }: ProductPageProps) {
@@ -263,10 +286,6 @@ export default async function ProductPage({
     notFound();
   }
 
-  /* =======================================================
-     SAFE VALUES
-  ======================================================= */
-
   const productImage = product.image ?? null;
 
   const productImages = Array.isArray(product.images)
@@ -277,9 +296,45 @@ export default async function ProductPage({
 
   const productName = product.name ?? "Product";
 
-  /* =======================================================
-     WHATSAPP
-  ======================================================= */
+  /*
+   * Product specifications
+   *
+   * Empty/null values are automatically removed.
+   */
+  const productDetails = [
+    {
+      label: "Brand",
+      value: product.brand,
+    },
+    {
+      label: "Material",
+      value: product.material,
+    },
+    {
+      label: "Size",
+      value: product.size,
+    },
+    {
+      label: "Capacity",
+      value: product.capacity,
+    },
+    {
+      label: "Colour",
+      value: product.colour,
+    },
+    {
+      label: "Warranty",
+      value: product.warranty,
+    },
+    {
+      label: "Model Number",
+      value: product.model_number,
+    },
+  ].filter(
+    (item) =>
+      typeof item.value === "string" &&
+      item.value.trim().length > 0
+  );
 
   const whatsappMessage = `Hello Dayal Kitchen Ware 👋
 
@@ -295,36 +350,19 @@ Please share more details and availability.`;
     whatsappMessage
   )}`;
 
-  /* =======================================================
-     PAGE
-  ======================================================= */
-
   return (
     <main className="min-h-screen overflow-x-clip bg-[#faf9f6] text-zinc-900">
 
-      {/* =====================================================
-          ANDROID BACK HANDLER
-      ===================================================== */}
-
       <MobileBackHandler />
-
-      {/* =====================================================
-          STRUCTURED DATA
-      ===================================================== */}
 
       <ProductSchema product={product} />
 
       <BreadcrumbSchema product={product} />
 
-      {/* =====================================================
-          NAVBAR
-      ===================================================== */}
-
+      {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 backdrop-blur">
 
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-
-          {/* LOGO */}
 
           <Link href="/" className="block min-w-0">
 
@@ -338,8 +376,6 @@ Please share more details and availability.`;
 
           </Link>
 
-          {/* BACK BUTTON */}
-
           <Link
             href="/#products"
             className="shrink-0 rounded-full bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-amber-700 sm:px-5 sm:text-sm"
@@ -351,32 +387,22 @@ Please share more details and availability.`;
 
       </header>
 
-      {/* =====================================================
-          PRODUCT SECTION
-      ===================================================== */}
-
+      {/* PRODUCT */}
       <section className="w-full max-w-full overflow-x-clip px-4 py-8 sm:px-6 sm:py-12 lg:mx-auto lg:max-w-7xl lg:px-8 lg:py-24">
 
         <div className="grid w-full min-w-0 max-w-full gap-10 lg:grid-cols-2 lg:gap-16">
 
-          {/* =================================================
-              PRODUCT GALLERY
-          ================================================= */}
-
+          {/* GALLERY */}
           <ProductGallery
             name={productName}
             image={productImage}
             images={productImages}
           />
 
-          {/* =================================================
-              PRODUCT DETAILS
-          ================================================= */}
-
+          {/* PRODUCT INFORMATION */}
           <div className="flex min-w-0 flex-col justify-center">
 
             {/* BADGE */}
-
             {product.badge && (
               <span className="mb-4 w-fit rounded-full bg-amber-100 px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-800">
                 {product.badge}
@@ -384,39 +410,94 @@ Please share more details and availability.`;
             )}
 
             {/* CATEGORY */}
-
             {product.category && (
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
                 {product.category}
               </p>
             )}
 
-            {/* PRODUCT NAME */}
-
+            {/* NAME */}
             <h1 className="mt-4 break-words text-3xl font-bold tracking-tight sm:text-5xl">
               {productName}
             </h1>
 
             {/* PRICE */}
-
             <div className="mt-6 flex flex-wrap items-center gap-4">
 
               <span className="text-3xl font-bold">
-                ₹{productPrice}
+                ₹{productPrice.toLocaleString("en-IN")}
               </span>
 
               {product.old_price !== null &&
                 product.old_price !== undefined &&
                 Number(product.old_price) > productPrice && (
                   <span className="text-lg text-zinc-400 line-through">
-                    ₹{Number(product.old_price)}
+                    ₹{Number(product.old_price).toLocaleString("en-IN")}
                   </span>
                 )}
 
             </div>
 
-            {/* DESCRIPTION */}
+            {/* PRODUCT DETAILS */}
+            {productDetails.length > 0 && (
+              <div className="mt-8">
 
+                <div className="mb-4">
+
+                  <h2 className="text-xl font-bold tracking-tight">
+                    Product Details
+                  </h2>
+
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Key specifications
+                  </p>
+
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2">
+
+                    {productDetails.map((detail, index) => (
+                      <div
+                        key={detail.label}
+                        className={`
+                          flex min-w-0 items-center justify-between gap-4
+                          px-4 py-4
+                          sm:px-5
+                          ${
+                            index < productDetails.length - 1
+                              ? "border-b border-zinc-100"
+                              : ""
+                          }
+                          ${
+                            productDetails.length > 1 &&
+                            index % 2 === 0
+                              ? "sm:border-r sm:border-zinc-100"
+                              : ""
+                          }
+                        `}
+                      >
+
+                        <span className="shrink-0 text-sm font-medium text-zinc-500">
+                          {detail.label}
+                        </span>
+
+                        <span className="min-w-0 break-words text-right text-sm font-semibold text-zinc-900">
+                          {detail.value}
+                        </span>
+
+                      </div>
+                    ))}
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* DESCRIPTION */}
             {product.description && (
               <div className="mt-8">
 
@@ -431,13 +512,8 @@ Please share more details and availability.`;
               </div>
             )}
 
-            {/* =================================================
-                ACTION BUTTONS
-            ================================================= */}
-
+            {/* ACTIONS */}
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-
-              {/* WHATSAPP */}
 
               <a
                 href={whatsappLink}
@@ -447,8 +523,6 @@ Please share more details and availability.`;
               >
                 Ask on WhatsApp
               </a>
-
-              {/* ADD TO CART */}
 
               <AddToCartButton
                 product={{
@@ -463,7 +537,6 @@ Please share more details and availability.`;
             </div>
 
             {/* CONTINUE SHOPPING */}
-
             <Link
               href="/#products"
               className="mt-4 block rounded-full border border-zinc-300 bg-white px-8 py-4 text-center font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
