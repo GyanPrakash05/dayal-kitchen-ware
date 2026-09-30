@@ -1,555 +1,817 @@
 import { notFound } from "next/navigation";
-import { supabase } from "@/app/lib/supabase";
-import type { Metadata } from "next";
-import Link from "next/link";
+import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
+
 import MobileBackHandler from "@/app/components/MobileBackHandler";
 import ProductGallery from "@/app/components/ProductGallery";
 import AddToCartButton from "@/app/components/AddToCartButton";
+import ProductReviews from "../../components/ProductReviews";
 
-export const revalidate = 3600;
-
-type ProductPageProps = {
-  params: Promise<{
-    id: string;
-  }>;
+type Product = {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  price: number;
+  old_price: number | null;
+  badge: string | null;
+  image: string | null;
+  images: string[] | null;
+  description: string | null;
+  brand: string | null;
+  size: string | null;
+  material: string | null;
+  capacity: string | null;
+  colour: string | null;
+  warranty: string | null;
+  model_number: string | null;
 };
 
-export async function generateStaticParams() {
-  const { data: products, error } = await supabase
-    .from("products")
-    .select("slug");
+type SuggestedProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  price: number;
+  old_price: number | null;
+  badge: string | null;
+  image: string | null;
+  images: string[] | null;
+};
 
-  if (error) {
-    console.error("STATIC PRODUCT PATH ERROR:", error);
-    return [];
-  }
+type Review = {
+  rating: number;
+};
 
+function StarsInline({ rating }: { rating: number }) {
   return (
-    products?.map((product) => ({
-      id: product.slug,
-    })) || []
+    <div
+      className="flex items-center gap-0.5"
+      aria-label={`${rating.toFixed(1)} out of 5 stars`}
+    >
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          className={
+            star <= Math.round(rating)
+              ? "text-amber-500"
+              : "text-zinc-300"
+          }
+        >
+          ★
+        </span>
+      ))}
+    </div>
   );
 }
 
-export async function generateMetadata({
-  params,
-}: ProductPageProps): Promise<Metadata> {
-  const { id } = await params;
-
-  const { data: product, error } = await supabase
-    .from("products")
-    .select("name, description, image, price, category, slug, brand")
-    .eq("slug", id)
-    .single();
-
-  if (error || !product) {
-    return {
-      title: "Product Not Found | Dayal Kitchen Ware",
-      description: "The requested product could not be found.",
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
-  }
-
-  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
-  const productUrl = `${baseUrl}/products/${product.slug}`;
-
-  const description =
-    product.description?.slice(0, 160) ||
-    `Buy ${product.name} from Dayal Kitchen Ware. Quality kitchenware and home products.`;
-
-  return {
-    title: `${product.name} | Dayal Kitchen Ware`,
-    description,
-
-    keywords: [
-      product.name,
-      product.category,
-      "Dayal Kitchen Ware",
-      "kitchenware",
-      "kitchen products",
-      "kitchen essentials",
-      "cookware",
-      "pressure cooker",
-      "kitchen utensils",
-    ].filter(Boolean),
-
-    alternates: {
-      canonical: productUrl,
-    },
-
-    openGraph: {
-      title: `${product.name} | Dayal Kitchen Ware`,
-      description,
-      url: productUrl,
-      siteName: "Dayal Kitchen Ware",
-      type: "website",
-      locale: "en_IN",
-
-      images: product.image
-        ? [
-            {
-              url: product.image,
-              alt: product.name,
-            },
-          ]
-        : [],
-    },
-
-    twitter: {
-      card: "summary_large_image",
-      title: `${product.name} | Dayal Kitchen Ware`,
-      description,
-      images: product.image ? [product.image] : [],
-    },
-
-    robots: {
-      index: true,
-      follow: true,
-
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-        "max-video-preview": -1,
-      },
-    },
-  };
+function formatPrice(price: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(price);
 }
 
-function ProductSchema({
-  product,
+function DetailRow({
+  label,
+  value,
 }: {
-  product: any;
+  label: string;
+  value: string | null;
 }) {
-  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
-  const productUrl = `${baseUrl}/products/${product.slug}`;
-
-  const additionalProperties = [
-    {
-      name: "Material",
-      value: product.material,
-    },
-    {
-      name: "Size",
-      value: product.size,
-    },
-    {
-      name: "Capacity",
-      value: product.capacity,
-    },
-    {
-      name: "Colour",
-      value: product.colour,
-    },
-    {
-      name: "Warranty",
-      value: product.warranty,
-    },
-    {
-      name: "Model Number",
-      value: product.model_number,
-    },
-  ]
-    .filter(
-      (item) =>
-        typeof item.value === "string" &&
-        item.value.trim().length > 0
-    )
-    .map((item) => ({
-      "@type": "PropertyValue",
-      name: item.name,
-      value: item.value,
-    }));
-
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-
-    name: product.name,
-
-    category: product.category || undefined,
-
-    description:
-      product.description ||
-      `Buy ${product.name} from Dayal Kitchen Ware.`,
-
-    image: product.image ? [product.image] : [],
-
-    url: productUrl,
-
-    ...(product.brand
-      ? {
-          brand: {
-            "@type": "Brand",
-            name: product.brand,
-          },
-        }
-      : {}),
-
-    ...(additionalProperties.length > 0
-      ? {
-          additionalProperty: additionalProperties,
-        }
-      : {}),
-
-    offers: {
-      "@type": "Offer",
-      url: productUrl,
-      priceCurrency: "INR",
-      price: Number(product.price),
-
-      availability: "https://schema.org/InStock",
-
-      itemCondition: "https://schema.org/NewCondition",
-
-      seller: {
-        "@type": "Organization",
-        name: "Dayal Kitchen Ware",
-        url: baseUrl,
-      },
-    },
-  };
+  if (!value) return null;
 
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(schema),
-      }}
-    />
-  );
-}
+    <div className="flex flex-col gap-1 border-b border-zinc-100 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-sm font-medium text-zinc-500">
+        {label}
+      </span>
 
-function BreadcrumbSchema({
-  product,
-}: {
-  product: any;
-}) {
-  const baseUrl = "https://dayal-kitchen-ware.vercel.app";
-  const productUrl = `${baseUrl}/products/${product.slug}`;
-
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: `${baseUrl}/`,
-      },
-
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Products",
-        item: `${baseUrl}/#products`,
-      },
-
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: product.name,
-        item: productUrl,
-      },
-    ],
-  };
-
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(schema),
-      }}
-    />
+      <span className="text-sm font-semibold text-zinc-900 sm:text-right">
+        {value}
+      </span>
+    </div>
   );
 }
 
 export default async function ProductPage({
   params,
-}: ProductPageProps) {
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
 
-  const { data: product, error } = await supabase
+const { data: productBySlug, error: slugError } =
+  await supabaseAdmin
     .from("products")
-    .select("*")
+    .select(
+      `
+        id,
+        name,
+        slug,
+        category,
+        price,
+        old_price,
+        badge,
+        image,
+        images,
+        description,
+        brand,
+        size,
+        material,
+        capacity,
+        colour,
+        warranty,
+        model_number
+      `
+    )
     .eq("slug", id)
-    .single();
+    .maybeSingle();
 
-  if (error || !product) {
-    console.error("PRODUCT DETAIL ERROR:", error);
-    notFound();
+let product = productBySlug;
+
+if (!product && !slugError) {
+  const { data: productById, error: idError } =
+    await supabaseAdmin
+      .from("products")
+      .select(
+        `
+          id,
+          name,
+          slug,
+          category,
+          price,
+          old_price,
+          badge,
+          image,
+          images,
+          description,
+          brand,
+          size,
+          material,
+          capacity,
+          colour,
+          warranty,
+          model_number
+        `
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+  if (idError) {
+    console.error("Product ID lookup error:", {
+      message: idError.message,
+      details: idError.details,
+      hint: idError.hint,
+      code: idError.code,
+    });
   }
 
-  const productImage = product.image ?? null;
+  product = productById;
+}
 
-  const productImages = Array.isArray(product.images)
-    ? product.images
-    : null;
+if (slugError) {
+  console.error("Product slug lookup error:", {
+    message: slugError.message,
+    details: slugError.details,
+    hint: slugError.hint,
+    code: slugError.code,
+  });
 
-  const productPrice = Number(product.price);
+  notFound();
+}
 
-  const productName = product.name ?? "Product";
+if (!product) {
+  notFound();
+}
+
+
+  const typedProduct = product as Product;
 
   /*
-   * Product specifications
-   *
-   * Empty/null values are automatically removed.
+   * Load approved reviews for the rating summary.
+   * No fake/default rating is used.
    */
-  const productDetails = [
-    {
-      label: "Brand",
-      value: product.brand,
-    },
-    {
-      label: "Material",
-      value: product.material,
-    },
-    {
-      label: "Size",
-      value: product.size,
-    },
-    {
-      label: "Capacity",
-      value: product.capacity,
-    },
-    {
-      label: "Colour",
-      value: product.colour,
-    },
-    {
-      label: "Warranty",
-      value: product.warranty,
-    },
-    {
-      label: "Model Number",
-      value: product.model_number,
-    },
-  ].filter(
-    (item) =>
-      typeof item.value === "string" &&
-      item.value.trim().length > 0
-  );
+  const { data: reviews } = await supabaseAdmin
+    .from("product_reviews")
+    .select("rating")
+    .eq("product_id", typedProduct.id)
+    .eq("status", "approved");
 
-  const whatsappMessage = `Hello Dayal Kitchen Ware 👋
+  const approvedReviews = (reviews ?? []) as Review[];
 
-I am interested in:
+  const reviewCount = approvedReviews.length;
 
-${productName}
+  const averageRating =
+    reviewCount > 0
+      ? Number(
+          (
+            approvedReviews.reduce(
+              (sum, review) => sum + Number(review.rating),
+              0
+            ) / reviewCount
+          ).toFixed(1)
+        )
+      : 0;
 
-Price: ₹${productPrice}
+  /*
+   * Suggested products from the same category.
+   */
+  const { data: suggestedProducts } = await supabaseAdmin
+    .from("products")
+    .select(
+      `
+        id,
+        name,
+        slug,
+        category,
+        price,
+        old_price,
+        badge,
+        image,
+        images
+      `
+    )
+    .eq("category", typedProduct.category)
+    .neq("id", typedProduct.id)
+    .order("created_at", { ascending: false })
+    .limit(4);
 
-Please share more details and availability.`;
+  /*
+   * Fallback: if there are not enough products in the same category,
+   * load some other products.
+   */
+  let finalSuggestedProducts =
+    (suggestedProducts ?? []) as SuggestedProduct[];
 
-  const whatsappLink = `https://wa.me/917011872380?text=${encodeURIComponent(
-    whatsappMessage
-  )}`;
+  if (finalSuggestedProducts.length < 4) {
+    const existingIds = [
+      typedProduct.id,
+      ...finalSuggestedProducts.map((item) => item.id),
+    ];
+
+    const { data: fallbackProducts } = await supabaseAdmin
+      .from("products")
+      .select(
+        `
+          id,
+          name,
+          slug,
+          category,
+          price,
+          old_price,
+          badge,
+          image,
+          images
+        `
+      )
+      .not("id", "in", `(${existingIds.join(",")})`)
+      .order("created_at", { ascending: false })
+      .limit(4);
+
+    const fallback =
+      (fallbackProducts ?? []) as SuggestedProduct[];
+
+    finalSuggestedProducts = [
+      ...finalSuggestedProducts,
+      ...fallback,
+    ].slice(0, 4);
+  }
 
   return (
-    <main className="min-h-screen overflow-x-clip bg-[#faf9f6] text-zinc-900">
-
+    <>
       <MobileBackHandler />
 
-      <ProductSchema product={product} />
+      <main className="min-h-screen bg-[#faf9f6]">
+        {/* ================= HEADER + BREADCRUMB ================= */}
 
-      <BreadcrumbSchema product={product} />
+<section className="border-b border-zinc-200 bg-white">
+  <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
 
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 backdrop-blur">
+    {/* Brand Header */}
+    <div className="flex min-h-[76px] items-center justify-between gap-4">
 
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-
-          <Link href="/" className="block min-w-0">
-
-            <h1 className="text-base font-bold sm:text-xl">
-              DAYAL KITCHEN WARE
-            </h1>
-
-            <p className="text-[8px] uppercase tracking-[0.2em] text-zinc-500 sm:text-[10px] sm:tracking-[0.25em]">
-              Kitchen • Home • Lifestyle
-            </p>
-
-          </Link>
-
-          <Link
-            href="/#products"
-            className="shrink-0 rounded-full bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-amber-700 sm:px-5 sm:text-sm"
-          >
-            ← Back to Products
-          </Link>
-
+      {/* Brand */}
+      <a href="/" className="group min-w-0">
+        <div className="text-lg font-black tracking-tight text-zinc-950 sm:text-xl">
+          DAYAL KITCHEN WARE
         </div>
 
-      </header>
+        <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500 sm:text-xs">
+          Kitchen • Home • Lifestyle
+        </div>
+      </a>
 
-      {/* PRODUCT */}
-      <section className="w-full max-w-full overflow-x-clip px-4 py-8 sm:px-6 sm:py-12 lg:mx-auto lg:max-w-7xl lg:px-8 lg:py-24">
+      {/* Navigation */}
+      <nav className="hidden items-center gap-6 md:flex">
+        <a
+          href="/"
+          className="text-sm font-medium text-zinc-600 transition hover:text-zinc-950"
+        >
+          Home
+        </a>
 
-        <div className="grid w-full min-w-0 max-w-full gap-10 lg:grid-cols-2 lg:gap-16">
+        <a
+          href="/#categories"
+          className="text-sm font-medium text-zinc-600 transition hover:text-zinc-950"
+        >
+          Categories
+        </a>
 
-          {/* GALLERY */}
-          <ProductGallery
-            name={productName}
-            image={productImage}
-            images={productImages}
-          />
+        <a
+          href="/#products"
+          className="text-sm font-medium text-zinc-600 transition hover:text-zinc-950"
+        >
+          Products
+        </a>
 
-          {/* PRODUCT INFORMATION */}
-          <div className="flex min-w-0 flex-col justify-center">
+        <a
+          href="/#location"
+          className="text-sm font-medium text-zinc-600 transition hover:text-zinc-950"
+        >
+          Store
+        </a>
+      </nav>
 
-            {/* BADGE */}
-            {product.badge && (
-              <span className="mb-4 w-fit rounded-full bg-amber-100 px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-800">
-                {product.badge}
-              </span>
-            )}
+      {/* Cart */}
+      <a
+        href="/cart"
+        className="flex shrink-0 items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:border-zinc-300 hover:bg-zinc-100"
+      >
+        <span className="text-base">🛒</span>
+        <span className="hidden sm:inline">Cart</span>
+      </a>
+    </div>
 
-            {/* CATEGORY */}
-            {product.category && (
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-                {product.category}
-              </p>
-            )}
+    {/* Mobile Navigation */}
+    <div className="flex gap-5 overflow-x-auto border-t border-zinc-100 py-3 md:hidden">
+      <a
+        href="/"
+        className="whitespace-nowrap text-xs font-semibold text-zinc-700"
+      >
+        Home
+      </a>
 
-            {/* NAME */}
-            <h1 className="mt-4 break-words text-3xl font-bold tracking-tight sm:text-5xl">
-              {productName}
-            </h1>
+      <a
+        href="/#categories"
+        className="whitespace-nowrap text-xs font-semibold text-zinc-700"
+      >
+        Categories
+      </a>
 
-            {/* PRICE */}
-            <div className="mt-6 flex flex-wrap items-center gap-4">
+      <a
+        href="/#products"
+        className="whitespace-nowrap text-xs font-semibold text-zinc-700"
+      >
+        Products
+      </a>
 
-              <span className="text-3xl font-bold">
-                ₹{productPrice.toLocaleString("en-IN")}
-              </span>
+      <a
+        href="/#location"
+        className="whitespace-nowrap text-xs font-semibold text-zinc-700"
+      >
+        Store
+      </a>
+    </div>
 
-              {product.old_price !== null &&
-                product.old_price !== undefined &&
-                Number(product.old_price) > productPrice && (
-                  <span className="text-lg text-zinc-400 line-through">
-                    ₹{Number(product.old_price).toLocaleString("en-IN")}
-                  </span>
-                )}
+    {/* Breadcrumb */}
+    <div className="flex flex-wrap items-center gap-2 border-t border-zinc-100 py-4 text-xs text-zinc-500 sm:text-sm">
+      <a
+        href="/"
+        className="font-medium transition hover:text-zinc-900"
+      >
+        Home
+      </a>
 
-            </div>
+      <span>/</span>
 
-            {/* PRODUCT DETAILS */}
-            {productDetails.length > 0 && (
-              <div className="mt-8">
+      <span>{typedProduct.category}</span>
 
-                <div className="mb-4">
+      <span>/</span>
 
-                  <h2 className="text-xl font-bold tracking-tight">
-                    Product Details
-                  </h2>
+      <span className="max-w-[220px] truncate font-medium text-zinc-900 sm:max-w-[420px]">
+        {typedProduct.name}
+      </span>
+    </div>
 
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Key specifications
-                  </p>
+  </div>
+</section>
+        {/* ================= PRODUCT ================= */}
 
-                </div>
+        <section className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+          <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-12">
+            {/* ================= LEFT ================= */}
 
-                <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2">
-
-                    {productDetails.map((detail, index) => (
-                      <div
-                        key={detail.label}
-                        className={`
-                          flex min-w-0 items-center justify-between gap-4
-                          px-4 py-4
-                          sm:px-5
-                          ${
-                            index < productDetails.length - 1
-                              ? "border-b border-zinc-100"
-                              : ""
-                          }
-                          ${
-                            productDetails.length > 1 &&
-                            index % 2 === 0
-                              ? "sm:border-r sm:border-zinc-100"
-                              : ""
-                          }
-                        `}
-                      >
-
-                        <span className="shrink-0 text-sm font-medium text-zinc-500">
-                          {detail.label}
-                        </span>
-
-                        <span className="min-w-0 break-words text-right text-sm font-semibold text-zinc-900">
-                          {detail.value}
-                        </span>
-
-                      </div>
-                    ))}
-
-                  </div>
-
-                </div>
-
-              </div>
-            )}
-
-            {/* DESCRIPTION */}
-            {product.description && (
-              <div className="mt-8">
-
-                <h2 className="text-lg font-bold">
-                  Product Description
-                </h2>
-
-                <p className="mt-3 whitespace-pre-line break-words text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
-                  {product.description}
-                </p>
-
-              </div>
-            )}
-
-            {/* ACTIONS */}
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-green-600 px-6 py-4 text-center font-semibold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-lg"
-              >
-                Ask on WhatsApp
-              </a>
-
-              <AddToCartButton
-                product={{
-                  id: product.id,
-                  name: product.name,
-                  slug: product.slug,
-                  price: Number(product.price),
-                  image: product.image,
-                }}
+            <div className="min-w-0">
+              <ProductGallery
+                name={typedProduct.name}
+                image={typedProduct.image}
+                images={typedProduct.images}
               />
 
+              {/* Mobile / below-image product information */}
+
+              <div className="mt-8 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm lg:hidden">
+                <div className="mb-5">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                    {typedProduct.category}
+                  </p>
+
+                  <h1 className="text-2xl font-bold leading-tight tracking-tight text-zinc-950">
+                    {typedProduct.name}
+                  </h1>
+                </div>
+
+                {reviewCount > 0 && (
+                  <div className="mb-5 flex items-center gap-3">
+                    <StarsInline rating={averageRating} />
+
+                    <span className="text-sm font-medium text-zinc-600">
+                      {averageRating.toFixed(1)} · {reviewCount}{" "}
+                      {reviewCount === 1 ? "review" : "reviews"}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-end gap-3">
+                  <span className="text-3xl font-bold text-zinc-950">
+                    {formatPrice(Number(typedProduct.price))}
+                  </span>
+
+                  {typedProduct.old_price &&
+                    Number(typedProduct.old_price) >
+                      Number(typedProduct.price) && (
+                      <span className="pb-1 text-base text-zinc-400 line-through">
+                        {formatPrice(
+                          Number(typedProduct.old_price)
+                        )}
+                      </span>
+                    )}
+                </div>
+              </div>
+
+              {/* ================= DETAILS UNDER IMAGE ================= */}
+
+              <div className="mt-8 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+                <div className="mb-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                    Product information
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">
+                    Details
+                  </h2>
+                </div>
+
+                <div className="divide-y divide-zinc-100">
+                  <DetailRow
+                    label="Brand"
+                    value={typedProduct.brand}
+                  />
+
+                  <DetailRow
+                    label="Size"
+                    value={typedProduct.size}
+                  />
+
+                  <DetailRow
+                    label="Material"
+                    value={typedProduct.material}
+                  />
+
+                  <DetailRow
+                    label="Capacity"
+                    value={typedProduct.capacity}
+                  />
+
+                  <DetailRow
+                    label="Colour"
+                    value={typedProduct.colour}
+                  />
+
+                  <DetailRow
+                    label="Warranty"
+                    value={typedProduct.warranty}
+                  />
+
+                  <DetailRow
+                    label="Model Number"
+                    value={typedProduct.model_number}
+                  />
+                </div>
+              </div>
+
+              {/* ================= DESCRIPTION ================= */}
+
+              {typedProduct.description && (
+                <div className="mt-8 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                    About this product
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-bold tracking-tight text-zinc-950">
+                    Description
+                  </h2>
+
+                  <div className="mt-5 whitespace-pre-line text-[15px] leading-7 text-zinc-600">
+                    {typedProduct.description}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* CONTINUE SHOPPING */}
-            <Link
-              href="/#products"
-              className="mt-4 block rounded-full border border-zinc-300 bg-white px-8 py-4 text-center font-semibold transition-all hover:border-zinc-900 hover:shadow-sm"
-            >
-              Continue Shopping
-            </Link>
+            {/* ================= RIGHT ================= */}
 
+            <div className="min-w-0">
+              <div className="sticky top-6 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                  {typedProduct.category}
+                </p>
+
+                <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-zinc-950 sm:text-4xl">
+                  {typedProduct.name}
+                </h1>
+
+                {typedProduct.brand && (
+                  <p className="mt-3 text-sm text-zinc-500">
+                    Brand:{" "}
+                    <span className="font-semibold text-zinc-800">
+                      {typedProduct.brand}
+                    </span>
+                  </p>
+                )}
+
+                {/* Rating */}
+
+                <div className="mt-5">
+                  {reviewCount > 0 ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <StarsInline rating={averageRating} />
+
+                        <span className="font-semibold text-zinc-900">
+                          {averageRating.toFixed(1)}
+                        </span>
+                      </div>
+
+                      <span className="text-sm text-zinc-500">
+                        {reviewCount}{" "}
+                        {reviewCount === 1
+                          ? "verified review"
+                          : "verified reviews"}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-500">
+                      No reviews yet
+                    </p>
+                  )}
+                </div>
+
+                {/* Price */}
+
+                <div className="mt-7 flex flex-wrap items-end gap-3">
+                  <span className="text-4xl font-bold tracking-tight text-zinc-950">
+                    {formatPrice(Number(typedProduct.price))}
+                  </span>
+
+                  {typedProduct.old_price &&
+                    Number(typedProduct.old_price) >
+                      Number(typedProduct.price) && (
+                      <>
+                        <span className="pb-1 text-lg text-zinc-400 line-through">
+                          {formatPrice(
+                            Number(typedProduct.old_price)
+                          )}
+                        </span>
+
+                        <span className="mb-1 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                          Save{" "}
+                          {formatPrice(
+                            Number(typedProduct.old_price) -
+                              Number(typedProduct.price)
+                          )}
+                        </span>
+                      </>
+                    )}
+                </div>
+
+                {typedProduct.badge && (
+                  <div className="mt-5 inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
+                    {typedProduct.badge}
+                  </div>
+                )}
+
+                {/* Quick specifications */}
+
+                <div className="mt-7 grid grid-cols-2 gap-3">
+                  {typedProduct.size && (
+                    <div className="rounded-2xl bg-[#faf9f6] p-4">
+                      <p className="text-xs text-zinc-500">
+                        Size
+                      </p>
+                      <p className="mt-1 font-semibold text-zinc-900">
+                        {typedProduct.size}
+                      </p>
+                    </div>
+                  )}
+
+                  {typedProduct.material && (
+                    <div className="rounded-2xl bg-[#faf9f6] p-4">
+                      <p className="text-xs text-zinc-500">
+                        Material
+                      </p>
+                      <p className="mt-1 font-semibold text-zinc-900">
+                        {typedProduct.material}
+                      </p>
+                    </div>
+                  )}
+
+                  {typedProduct.capacity && (
+                    <div className="rounded-2xl bg-[#faf9f6] p-4">
+                      <p className="text-xs text-zinc-500">
+                        Capacity
+                      </p>
+                      <p className="mt-1 font-semibold text-zinc-900">
+                        {typedProduct.capacity}
+                      </p>
+                    </div>
+                  )}
+
+                  {typedProduct.colour && (
+                    <div className="rounded-2xl bg-[#faf9f6] p-4">
+                      <p className="text-xs text-zinc-500">
+                        Colour
+                      </p>
+                      <p className="mt-1 font-semibold text-zinc-900">
+                        {typedProduct.colour}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add to cart */}
+
+                <div className="mt-8">
+                  <AddToCartButton
+                    product={{
+                      id: typedProduct.id,
+                      name: typedProduct.name,
+                      slug: typedProduct.slug,
+                      price: Number(typedProduct.price),
+                      image: typedProduct.image ?? "",
+                    }}
+                  />
+                </div>
+
+                {/* Delivery / help */}
+
+                <div className="mt-6 rounded-2xl bg-zinc-50 p-5">
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <span className="text-lg">🚚</span>
+
+                      <div>
+                        <p className="font-semibold text-zinc-900">
+                          Local delivery
+                        </p>
+
+                        <p className="mt-1 text-sm leading-6 text-zinc-500">
+                          Delivery availability and charges are
+                          confirmed according to your location and
+                          order.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <span className="text-lg">✓</span>
+
+                      <div>
+                        <p className="font-semibold text-zinc-900">
+                          Genuine local store
+                        </p>
+
+                        <p className="mt-1 text-sm leading-6 text-zinc-500">
+                          Product availability is subject to actual
+                          store inventory.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <span className="text-lg">💬</span>
+
+                      <div>
+                        <p className="font-semibold text-zinc-900">
+                          Need help?
+                        </p>
+
+                        <p className="mt-1 text-sm leading-6 text-zinc-500">
+                          Contact us for product or order-related
+                          assistance.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-        </div>
+          {/* ================= REVIEWS ================= */}
 
-      </section>
+          <section className="mt-16">
+            <ProductReviews productId={typedProduct.id} />
+          </section>
 
-    </main>
+          {/* ================= SUGGESTED PRODUCTS ================= */}
+
+          {finalSuggestedProducts.length > 0 && (
+            <section className="mt-20">
+              <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                    You may also like
+                  </p>
+
+                  <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-950">
+                    Suggested Products
+                  </h2>
+
+                  <p className="mt-2 text-sm text-zinc-500">
+                    More products you may find useful.
+                  </p>
+                </div>
+
+                <a
+                  href="/"
+                  className="text-sm font-semibold text-zinc-900 underline underline-offset-4"
+                >
+                  View all products
+                </a>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {finalSuggestedProducts.map((item) => (
+                  <a
+                    key={item.id}
+                    href={`/products/${item.id}`}
+                    className="group min-w-0 overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-[#eee8dc]">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          loading="lazy"
+                          className="h-full w-full object-contain p-5 transition duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <span className="text-5xl">
+                          🍳
+                        </span>
+                      )}
+
+                      {item.badge && (
+                        <span className="absolute left-3 top-3 rounded-full bg-zinc-900 px-2.5 py-1 text-[10px] font-bold text-white">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        {item.category}
+                      </p>
+
+                      <h3 className="mt-1 line-clamp-2 min-h-[40px] text-sm font-semibold leading-5 text-zinc-900">
+                        {item.name}
+                      </h3>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-zinc-950">
+                          {formatPrice(Number(item.price))}
+                        </span>
+
+                        {item.old_price &&
+                          Number(item.old_price) >
+                            Number(item.price) && (
+                            <span className="text-xs text-zinc-400 line-through">
+                              {formatPrice(
+                                Number(item.old_price)
+                              )}
+                            </span>
+                          )}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+        </section>
+      </main>
+    </>
   );
 }
