@@ -756,7 +756,7 @@ if (!product) {
                 {finalSuggestedProducts.map((item) => (
                   <a
                     key={item.id}
-                    href={`/products/${item.id}`}
+                    href={`/products/${item.slug}`}
                     className="group min-w-0 overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
                   >
                     <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-[#eee8dc]">

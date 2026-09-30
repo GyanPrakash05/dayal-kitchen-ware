@@ -3,6 +3,7 @@ import ProductCardImage from "./components/ProductCardImage";
 import MobileBottomNav from "./components/MobileBottomNav";
 import AuthButton from "./components/AuthButton";
 import { createServerSupabaseClient } from "@/app/lib/supabase-server";
+import LocationSelector from "@/app/components/LocationSelector";
 
 const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
 const WHATSAPP_NUMBER = "917011872380";
@@ -1534,6 +1535,10 @@ Please share more details and availability.`
                   >
                     📍
                   </div>
+
+<div className="mt-8">
+  <LocationSelector />
+</div>
 
                   <div>
 
