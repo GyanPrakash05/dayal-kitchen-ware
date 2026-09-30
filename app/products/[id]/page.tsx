@@ -402,9 +402,8 @@ Please share more details and availability.`;
           PRODUCT SECTION
       ===================================================== */}
 
-      <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-24">
-
-        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+      <section className="w-full max-w-full overflow-x-clip px-4 py-8 sm:px-6 sm:py-12 lg:mx-auto lg:max-w-7xl lg:px-8 lg:py-24">
+  <div className="grid w-full min-w-0 max-w-full gap-10 lg:grid-cols-2 lg:gap-16">
 
           {/* =================================================
               PRODUCT GALLERY

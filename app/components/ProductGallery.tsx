@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type ProductGalleryProps = {
   name: string;
@@ -13,15 +13,21 @@ export default function ProductGallery({
   image,
   images,
 }: ProductGalleryProps) {
-  const productImages =
-    Array.isArray(images) && images.length > 0
-      ? images.filter(
-          (img): img is string =>
-            typeof img === "string" && img.trim().length > 0
-        )
-      : image
-      ? [image]
-      : [];
+  const productImages = useMemo(() => {
+    const validImages =
+      Array.isArray(images)
+        ? images.filter(
+            (img): img is string =>
+              typeof img === "string" && img.trim().length > 0
+          )
+        : [];
+
+    if (validImages.length > 0) {
+      return validImages;
+    }
+
+    return image ? [image] : [];
+  }, [images, image]);
 
   const [selectedImage, setSelectedImage] = useState<string | null>(
     productImages[0] ?? null
@@ -29,26 +35,34 @@ export default function ProductGallery({
 
   useEffect(() => {
     setSelectedImage(productImages[0] ?? null);
-  }, [images, image]);
+  }, [productImages]);
+
+  /* =========================================================
+     NO IMAGE
+     ========================================================= */
 
   if (productImages.length === 0 || !selectedImage) {
     return (
-      <div className="flex min-h-[380px] w-full items-center justify-center overflow-hidden rounded-[2rem] bg-[#eee8dc] sm:min-h-[500px]">
-        <span className="text-8xl">🍳</span>
+      <div className="flex min-h-[320px] w-full max-w-full min-w-0 items-center justify-center overflow-hidden rounded-[2rem] bg-[#eee8dc] sm:min-h-[500px]">
+        <span className="text-7xl sm:text-8xl">🍳</span>
       </div>
     );
   }
 
   return (
-    <div className="w-full min-w-0">
-      {/* MAIN IMAGE */}
+    <div className="w-full max-w-full min-w-0 overflow-hidden">
+      {/* =====================================================
+          MAIN IMAGE
+          ===================================================== */}
 
       <div
         className="
           relative
           flex
-          h-[380px]
+          h-[320px]
           w-full
+          max-w-full
+          min-w-0
           items-center
           justify-center
           overflow-hidden
@@ -66,19 +80,21 @@ export default function ProductGallery({
             block
             h-full
             w-full
-            min-h-0
+            max-w-full
             min-w-0
             object-contain
-            p-6
+            p-4
             sm:p-10
           "
         />
       </div>
 
-      {/* THUMBNAILS */}
+      {/* =====================================================
+          THUMBNAILS
+          ===================================================== */}
 
       {productImages.length > 1 && (
-        <div className="mt-4 flex w-full min-w-0 gap-3 overflow-x-auto pb-3">
+        <div className="mt-4 flex w-full max-w-full min-w-0 gap-3 overflow-x-auto overscroll-x-contain pb-3">
           {productImages.map((img, index) => {
             const active = selectedImage === img;
 
@@ -90,8 +106,8 @@ export default function ProductGallery({
                 aria-label={`View ${name} image ${index + 1}`}
                 className={`
                   relative
-                  h-20
-                  w-20
+                  h-16
+                  w-16
                   shrink-0
                   overflow-hidden
                   rounded-xl
@@ -112,7 +128,7 @@ export default function ProductGallery({
                   alt={`${name} image ${index + 1}`}
                   loading="lazy"
                   decoding="async"
-                  className="block h-full w-full object-contain p-2"
+                  className="block h-full w-full max-w-full object-contain p-2"
                 />
 
                 {index === 0 && (
@@ -126,10 +142,12 @@ export default function ProductGallery({
         </div>
       )}
 
-      {/* IMAGE COUNT */}
+      {/* =====================================================
+          IMAGE COUNT
+          ===================================================== */}
 
       {productImages.length > 1 && (
-        <p className="mt-2 text-center text-xs text-zinc-400">
+        <p className="mt-2 w-full max-w-full text-center text-xs text-zinc-400">
           {productImages.length} images
         </p>
       )}
