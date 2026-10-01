@@ -4,6 +4,7 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import AuthButton from "./components/AuthButton";
 import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 import LocationSelector from "@/app/components/LocationSelector";
+import ShopTimingBanner from "@/app/components/ShopTimingBanner";
 
 const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
 const WHATSAPP_NUMBER = "917011872380";
@@ -737,7 +738,7 @@ export default async function Home({
           </div>
 
         </div>
-
+<ShopTimingBanner />
       </header>
 
       {/* =====================================================

@@ -84,6 +84,69 @@ function formatPaymentStatus(status: string) {
   return labels[status] || status;
 }
 
+function getDeliverySchedule() {
+  const now = new Date();
+
+  const indiaParts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const getPart = (type: string) =>
+    indiaParts.find(
+      (part) => part.type === type
+    )?.value || "";
+
+  const year = Number(getPart("year"));
+  const month = Number(getPart("month"));
+  const day = Number(getPart("day"));
+  const hour = Number(getPart("hour"));
+  const minute = Number(getPart("minute"));
+
+  const totalMinutes =
+    hour * 60 + minute;
+
+  const deliveryDate = new Date(
+    Date.UTC(
+      year,
+      month - 1,
+      day
+    )
+  );
+
+  let deliveryTimeWindow =
+    "Same-day delivery";
+
+  if (totalMinutes >= 22 * 60) {
+    deliveryDate.setUTCDate(
+      deliveryDate.getUTCDate() + 1
+    );
+
+    deliveryTimeWindow =
+      "Next-day delivery";
+  } else if (
+    totalMinutes < 9 * 60
+  ) {
+    deliveryTimeWindow =
+      "Same-day delivery after 9:00 AM";
+  }
+
+  const deliveryScheduledDate =
+    deliveryDate
+      .toISOString()
+      .slice(0, 10);
+
+  return {
+    deliveryScheduledDate,
+    deliveryTimeWindow,
+  };
+}
+
 /* =========================================================
    STATUS TRANSITIONS
 ========================================================= */
@@ -596,6 +659,16 @@ function orderEmailHtml(
       )
     );
 
+    const deliveryScheduledDate =
+  escapeHtml(
+    order?.delivery_scheduled_date || ""
+  );
+
+const deliveryTimeWindow =
+  escapeHtml(
+    order?.delivery_time_window || ""
+  );
+  
   return `
     <div style="
       font-family: Arial, sans-serif;
@@ -647,6 +720,15 @@ function orderEmailHtml(
       </p>
 
       <p>
+  <strong>Delivery Schedule:</strong>
+  ${deliveryTimeWindow}
+</p>
+
+<p>
+  <strong>Expected Delivery Date:</strong>
+  ${deliveryScheduledDate}
+</p>
+      <p>
         <strong>Order Total:</strong>
         ₹${totalAmount.toLocaleString("en-IN")}
       </p>
@@ -673,6 +755,8 @@ function orderEmailHtml(
     </div>
   `;
 }
+
+
 
 /* =========================================================
    POST
@@ -1008,6 +1092,12 @@ export async function POST(request: Request) {
     const totalAmount =
       subtotal + deliveryCharge;
 
+      const {
+  deliveryScheduledDate,
+  deliveryTimeWindow,
+} =
+  getDeliverySchedule();
+
     /* ---------------- CREATE ORDER ---------------- */
 
     const {
@@ -1042,14 +1132,19 @@ export async function POST(request: Request) {
           subtotal,
 
           delivery_charge:
-            deliveryCharge,
+  deliveryCharge,
 
-          cancellation_charge:
-            0,
+delivery_scheduled_date:
+  deliveryScheduledDate,
 
-          total_amount:
-            totalAmount,
+delivery_time_window:
+  deliveryTimeWindow,
 
+cancellation_charge:
+  0,
+
+total_amount:
+  totalAmount,
           payment_status:
             "pending",
 

@@ -35,6 +35,61 @@ function getPriceValue(
 
   return Number.isFinite(value) ? value : 0;
 }
+function getDeliverySchedule() {
+  const now = new Date();
+
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const getPart = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "";
+
+  const year = Number(getPart("year"));
+  const month = Number(getPart("month"));
+  const day = Number(getPart("day"));
+  const hour = Number(getPart("hour"));
+
+  const currentMinutes =
+    hour * 60 + Number(getPart("minute"));
+
+  let deliveryDate = new Date(
+    Date.UTC(year, month - 1, day)
+  );
+
+  let schedule = "Same-day delivery";
+
+  if (currentMinutes >= 22 * 60) {
+    deliveryDate.setUTCDate(
+      deliveryDate.getUTCDate() + 1
+    );
+
+    schedule = "Next-day delivery";
+  } else if (currentMinutes < 9 * 60) {
+    schedule = "Same-day delivery after 9:00 AM";
+  }
+
+  const formattedDate =
+    deliveryDate.toLocaleDateString("en-IN", {
+      timeZone: "UTC",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+  return {
+    date: formattedDate,
+    schedule,
+    isNextDay:
+      currentMinutes >= 22 * 60,
+  };
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -165,6 +220,7 @@ export default function CheckoutPage() {
   const total =
     subtotal + deliveryCharge;
 
+    const deliverySchedule = getDeliverySchedule();
   /* =========================================================
      PLACE ORDER
   ========================================================= */
@@ -414,6 +470,12 @@ export default function CheckoutPage() {
               customer_name:
                 cleanName,
 
+                delivery_scheduled_date:
+  deliverySchedule.date,
+
+delivery_time_window:
+  deliverySchedule.schedule,
+  
               customer_email:
                 currentUser.email ||
                 "",
@@ -931,6 +993,48 @@ export default function CheckoutPage() {
                   Delivery Fee
                 </span>
 
+<div
+  className={`mt-4 rounded-2xl border px-4 py-4 ${
+    deliverySchedule.isNextDay
+      ? "border-amber-200 bg-amber-50"
+      : "border-green-200 bg-green-50"
+  }`}
+>
+  <p
+    className={`text-xs font-bold uppercase tracking-wide ${
+      deliverySchedule.isNextDay
+        ? "text-amber-700"
+        : "text-green-700"
+    }`}
+  >
+    Delivery Schedule
+  </p>
+
+  <p
+    className={`mt-1 text-sm font-bold ${
+      deliverySchedule.isNextDay
+        ? "text-amber-900"
+        : "text-green-900"
+    }`}
+  >
+    {deliverySchedule.schedule}
+  </p>
+
+  <p
+    className={`mt-1 text-xs ${
+      deliverySchedule.isNextDay
+        ? "text-amber-700"
+        : "text-green-700"
+    }`}
+  >
+    Expected delivery date:{" "}
+    {deliverySchedule.date}
+  </p>
+
+  <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+    Delivery hours: 9:00 AM – 10:00 PM
+  </p>
+</div>
                 <span
                   className={
                     deliveryCharge === 0
