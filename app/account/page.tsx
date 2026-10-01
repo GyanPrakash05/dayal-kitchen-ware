@@ -955,21 +955,33 @@ function AccountContent() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* HEADER */}
+     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <h1 className="text-3xl font-bold text-gray-900">
+      My Account
+    </h1>
+    <p className="mt-1 text-gray-600">
+      Welcome back,{" "}
+      {user.full_name || "Customer"}
+    </p>
+  </div>
 
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              My Account
-            </h1>
+  <div className="flex flex-wrap gap-3">
+    <Link
+      href="/account/settings"
+      className="inline-flex w-fit rounded-xl border border-gray-300 bg-white px-5 py-3 font-semibold text-gray-800 transition hover:bg-gray-100"
+    >
+      ⚙️ Settings
+    </Link>
 
-            <p className="mt-1 text-gray-600">
-              Welcome back,{" "}
-              {user.full_name ||
-                "Customer"}
-            </p>
-          </div>
+    <Link
+      href="/"
+      className="inline-flex w-fit rounded-xl border border-gray-300 bg-white px-5 py-3 font-semibold text-gray-800 transition hover:bg-gray-100"
+    >
+      Continue Shopping
+    </Link>
+  </div>
+</div>
 
           <Link
             href="/"
