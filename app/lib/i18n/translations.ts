@@ -32,6 +32,9 @@ export const translations = {
       cart: "Cart",
       account: "Account",
       login: "Login",
+      about: "About",
+      contact: "Contact",
+      whatsapp: "WhatsApp Us",
     },
 
     common: {
@@ -118,6 +121,9 @@ export const translations = {
       cart: "कार्ट",
       account: "अकाउंट",
       login: "लॉगिन",
+      about: "हमारे बारे में",
+      contact: "संपर्क",
+      whatsapp: "WhatsApp करें",
     },
 
     common: {
@@ -204,6 +210,9 @@ export const translations = {
       cart: "Cart",
       account: "Account",
       login: "Login",
+      about: "About",
+      contact: "Contact",
+      whatsapp: "WhatsApp Us",
     },
 
     common: {

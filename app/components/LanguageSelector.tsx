@@ -1,45 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLanguage } from "@/app/lib/i18n/LanguageProvider";
 
 import {
   LANGUAGE_OPTIONS,
   type Language,
 } from "@/app/lib/i18n/translations";
 
-import {
-  getStoredLanguage,
-  saveLanguage,
-} from "@/app/lib/i18n/language";
-
 export default function LanguageSelector() {
-  const [language, setLanguage] = useState<Language>("en");
-
-  useEffect(() => {
-    setLanguage(getStoredLanguage());
-
-    const handleLanguageChange = () => {
-      setLanguage(getStoredLanguage());
-    };
-
-    window.addEventListener(
-      "dayal-language-change",
-      handleLanguageChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        "dayal-language-change",
-        handleLanguageChange
-      );
-    };
-  }, []);
+  const { language, setLanguage } = useLanguage();
 
   function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const newLanguage = event.target.value as Language;
-
     setLanguage(newLanguage);
-    saveLanguage(newLanguage);
   }
 
   return (

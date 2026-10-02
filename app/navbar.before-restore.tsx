@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AuthButton from "./components/AuthButton";
+import LanguageSelector from "./components/LanguageSelector";
 import { useLanguage } from "./lib/i18n/LanguageProvider";
 
 export default function Navbar() {
@@ -54,20 +55,23 @@ export default function Navbar() {
                 href="#about"
                 className="transition hover:text-amber-700"
               >
-                About
+                {t.home.aboutUs}
               </a>
 
               <a
                 href="#contact"
                 className="transition hover:text-amber-700"
               >
-                Contact
+                {t.home.contactUs}
               </a>
             </nav>
 
+            {/* LANGUAGE */}
+            <LanguageSelector />
+
             {/* DESKTOP WHATSAPP */}
             <a
-              href="https://wa.me/917011872380?text=Hello%20Dayal%20Kitchen%20Ware%20%F0%9F%91%8B%20I%20have%20a%20query%20about%20your%20products."
+              href="https://wa.me/917011872380?text=Hello%20Dayal%20Kitchen%20Ware%20%F0%9F%91%8B%20I%20have%20a%20query%20about%20your%20products"
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
@@ -118,7 +122,6 @@ export default function Navbar() {
               </svg>
             )}
           </button>
-
         </div>
 
         {/* MOBILE MENU */}
@@ -147,7 +150,7 @@ export default function Navbar() {
                 onClick={closeMenu}
                 className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
               >
-                About
+                {t.home.aboutUs}
               </a>
 
               <a
@@ -155,11 +158,17 @@ export default function Navbar() {
                 onClick={closeMenu}
                 className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
               >
-                Contact
+                {t.home.contactUs}
               </a>
 
+              {/* MOBILE LANGUAGE */}
+              <div className="px-4 py-2">
+                <LanguageSelector />
+              </div>
+
+              {/* MOBILE WHATSAPP */}
               <a
-                href="https://wa.me/917011872380?text=Hello%20Dayal%20Kitchen%20Ware%20%F0%9F%91%8B%20I%20have%20a%20query%20about%20your%20products."
+                href="https://wa.me/917011872380?text=Hello%20Dayal%20Kitchen%20Ware%20%F0%9F%91%8B%20I%20have%20a%20query%20about%20your%20products"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={closeMenu}
@@ -167,6 +176,11 @@ export default function Navbar() {
               >
                 WhatsApp Us
               </a>
+
+              {/* MOBILE AUTH */}
+              <div className="px-4 pt-2">
+                <AuthButton />
+              </div>
 
             </nav>
           </div>

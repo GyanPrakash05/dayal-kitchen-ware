@@ -462,12 +462,6 @@ export default async function Home({
                 >
                   About
                 </a>
-                <a
-  href="#download-app"
-  className="transition-colors hover:text-amber-700"
->
-  Download App
-</a>
               </nav>
 
               {/* DESKTOP SEARCH */}
@@ -524,7 +518,6 @@ export default async function Home({
               </a>
 
               <AuthButton />
-             
 
             </div>
 
@@ -636,12 +629,7 @@ export default async function Home({
                     >
                       About
                     </a>
-<a
-  href="#download-app"
-  className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
->
-  Download App
-</a>
+
                     {/* MOBILE SEARCH */}
 
                     <form
@@ -1678,99 +1666,6 @@ Please share more details and availability.`
               looking for something useful for everyday cooking,
               we are here to help you find the right product.
             </p>
-
-          </div>
-
-        </div>
-
-      </section>
-
-      {/* =====================================================
-          ANDROID APP DOWNLOAD
-      ===================================================== */}
-
-      <section
-        id="download-app"
-        className="border-t border-black/5 bg-[#faf9f6] py-14 sm:py-20"
-      >
-
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-          <div className="overflow-hidden rounded-[2rem] bg-zinc-950 px-6 py-10 text-white shadow-xl sm:rounded-[2.5rem] sm:px-10 sm:py-14 lg:px-14">
-
-            <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
-
-              {/* APP INFO */}
-
-              <div>
-
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-400 sm:text-sm">
-                  Dayal Kitchen Ware App
-                </p>
-
-                <h2 className="mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">
-                  Take Dayal Kitchen Ware with you.
-                </h2>
-
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base sm:leading-8">
-                  Browse our kitchenware collection from your Android
-                  phone and stay connected with Dayal Kitchen Ware
-                  wherever you are.
-                </p>
-
-                <div className="mt-6 flex flex-wrap gap-2">
-
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-300">
-                    Android App
-                  </span>
-
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-300">
-                    Easy Download
-                  </span>
-
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-300">
-                    Dayal Kitchen Ware
-                  </span>
-
-                </div>
-
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-
-                  <a
-                    href="/downloads/dayal-kitchen-ware.apk"
-                    download="dayal-kitchen-ware.apk"
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:bg-amber-500 hover:shadow-xl"
-                  >
-                    <span aria-hidden="true">↓</span>
-                    Download Android App
-                  </a>
-
-                  <a
-                    href="#about"
-                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3.5 text-sm font-semibold text-white transition-all hover:border-white/40 hover:bg-white/5"
-                  >
-                    Learn More
-                  </a>
-
-                </div>
-
-                <p className="mt-4 text-xs text-zinc-500">
-                  APK • Android • Direct download
-                </p>
-
-              </div>
-
-              {/* APP ICON / VISUAL */}
-
-              <div className="mx-auto flex h-36 w-36 shrink-0 items-center justify-center rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl sm:h-44 sm:w-44 sm:rounded-[2.5rem]">
-
-                <div className="flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-white text-4xl shadow-xl sm:h-28 sm:w-28 sm:text-5xl">
-                  🛍️
-                </div>
-
-              </div>
-
-            </div>
 
           </div>
 

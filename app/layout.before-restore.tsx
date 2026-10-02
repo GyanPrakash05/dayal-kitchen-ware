@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Footer from "./components/Footer";
+import { LanguageProvider } from "./lib/i18n/LanguageProvider";
 
 import "./globals.css";
 
 import { CartProvider } from "./context/CartContext";
 import FloatingWhatsApp from "./components/FloatingWhatsapp";
-import { LanguageProvider } from "./lib/i18n/LanguageProvider";
-import LanguageRuntime from "./components/LanguageRuntime";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -170,17 +169,15 @@ export default function RootLayout({
           }}
         />
 
-        <LanguageProvider>
-  <LanguageRuntime />
-
-  <CartProvider>
-    {children}
-
-    <Footer />
-
-    <FloatingWhatsApp />
-  </CartProvider>
+    <CartProvider>
+  <LanguageProvider>
+  {children}
 </LanguageProvider>
+
+  <Footer />
+
+  <FloatingWhatsApp />
+</CartProvider>
       </body>
     </html>
   );
