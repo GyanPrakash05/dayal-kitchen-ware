@@ -953,9 +953,10 @@ function AccountContent() {
     );
   }
 
-  return (
+   return (
     <main className="min-h-screen bg-gray-50">
-     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
     <h1 className="text-3xl font-bold text-gray-900">
       My Account
@@ -982,14 +983,6 @@ function AccountContent() {
     </Link>
   </div>
 </div>
-
-          <Link
-            href="/"
-            className="inline-flex w-fit rounded-xl border border-gray-300 bg-white px-5 py-3 font-semibold text-gray-800 transition hover:bg-gray-100"
-          >
-            Continue Shopping
-          </Link>
-        </div>
 
         {/* ALERTS */}
 
