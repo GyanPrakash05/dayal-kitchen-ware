@@ -5,6 +5,7 @@ import AuthButton from "./components/AuthButton";
 import { createServerSupabaseClient } from "@/app/lib/supabase-server";
 import LocationSelector from "@/app/components/LocationSelector";
 import ShopTimingBanner from "@/app/components/ShopTimingBanner";
+import AppDownloadButton from "./components/AppDownloadButton";
 
 const BASE_URL = "https://dayal-kitchen-ware.vercel.app";
 const WHATSAPP_NUMBER = "917011872380";
@@ -1736,14 +1737,7 @@ Please share more details and availability.`
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
 
-                  <a
-                    href="/downloads/dayal-kitchen-ware.apk"
-                    download="dayal-kitchen-ware.apk"
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:bg-amber-500 hover:shadow-xl"
-                  >
-                    <span aria-hidden="true">↓</span>
-                    Download Android App
-                  </a>
+                  <AppDownloadButton />
 
                   <a
                     href="#about"
