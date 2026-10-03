@@ -94,7 +94,9 @@ function DetailRow({
 
   return (
     <div className="flex flex-col gap-1 border-b border-zinc-100 py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-sm font-medium text-zinc-500">{label}</span>
+      <span className="text-sm font-medium text-zinc-500">
+        {label}
+      </span>
 
       <span className="text-sm font-semibold text-zinc-900 sm:text-right">
         {value}
@@ -114,38 +116,10 @@ export default async function ProductPage({
    * ============================================================
    * PRODUCT LOOKUP
    * ============================================================
-   * First try slug, then fall back to product ID.
    */
-  const { data: productBySlug, error: slugError } = await supabaseAdmin
-    .from("products")
-    .select(
-      `
-        id,
-        name,
-        slug,
-        category,
-        price,
-        old_price,
-        badge,
-        image,
-        images,
-        description,
-        brand,
-        size,
-        material,
-        capacity,
-        colour,
-        warranty,
-        model_number
-      `
-    )
-    .eq("slug", id)
-    .maybeSingle();
 
-  let product = productBySlug;
-
-  if (!product && !slugError) {
-    const { data: productById, error: idError } = await supabaseAdmin
+  const { data: productBySlug, error: slugError } =
+    await supabaseAdmin
       .from("products")
       .select(
         `
@@ -168,8 +142,38 @@ export default async function ProductPage({
           model_number
         `
       )
-      .eq("id", id)
+      .eq("slug", id)
       .maybeSingle();
+
+  let product = productBySlug;
+
+  if (!product && !slugError) {
+    const { data: productById, error: idError } =
+      await supabaseAdmin
+        .from("products")
+        .select(
+          `
+            id,
+            name,
+            slug,
+            category,
+            price,
+            old_price,
+            badge,
+            image,
+            images,
+            description,
+            brand,
+            size,
+            material,
+            capacity,
+            colour,
+            warranty,
+            model_number
+          `
+        )
+        .eq("id", id)
+        .maybeSingle();
 
     if (idError) {
       console.error("Product ID lookup error:", {
@@ -204,9 +208,8 @@ export default async function ProductPage({
    * ============================================================
    * REVIEWS
    * ============================================================
-   * Only approved reviews are used.
-   * No fake/default rating is shown.
    */
+
   const { data: reviews } = await supabaseAdmin
     .from("product_reviews")
     .select("rating")
@@ -233,8 +236,8 @@ export default async function ProductPage({
    * ============================================================
    * SUGGESTED PRODUCTS
    * ============================================================
-   * Same-category products first.
    */
+
   const { data: suggestedProducts } = await supabaseAdmin
     .from("products")
     .select(
@@ -259,8 +262,9 @@ export default async function ProductPage({
     (suggestedProducts ?? []) as SuggestedProduct[];
 
   /*
-   * Fallback products if fewer than 4 same-category products exist.
+   * Fallback products
    */
+
   if (finalSuggestedProducts.length < 4) {
     const existingIds = [
       typedProduct.id,
@@ -286,7 +290,8 @@ export default async function ProductPage({
       .order("created_at", { ascending: false })
       .limit(4);
 
-    const fallback = (fallbackProducts ?? []) as SuggestedProduct[];
+    const fallback =
+      (fallbackProducts ?? []) as SuggestedProduct[];
 
     finalSuggestedProducts = [
       ...finalSuggestedProducts,
@@ -307,6 +312,7 @@ export default async function ProductPage({
         {/* =====================================================
             HEADER
         ====================================================== */}
+
         <section className="border-b border-zinc-200 bg-white">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex min-h-[76px] items-center justify-between gap-4">
@@ -421,11 +427,14 @@ export default async function ProductPage({
         {/* =====================================================
             PRODUCT AREA
         ====================================================== */}
+
         <section className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-10">
           <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-12">
+
             {/* =================================================
                 LEFT SIDE
             ================================================== */}
+
             <div className="min-w-0">
               {/* Product gallery */}
               <ProductGallery
@@ -434,7 +443,10 @@ export default async function ProductPage({
                 images={typedProduct.images}
               />
 
-              {/* Mobile product summary */}
+              {/* =================================================
+                  MOBILE PRODUCT SUMMARY
+              ================================================== */}
+
               <div className="mt-6 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm lg:hidden">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
@@ -467,11 +479,14 @@ export default async function ProductPage({
 
                     <span className="text-sm font-medium text-zinc-600">
                       {averageRating.toFixed(1)} · {reviewCount}{" "}
-                      {reviewCount === 1 ? "review" : "reviews"}
+                      {reviewCount === 1
+                        ? "review"
+                        : "reviews"}
                     </span>
                   </div>
                 )}
 
+                {/* Mobile price */}
                 <div className="mt-5 flex flex-wrap items-end gap-3">
                   <span className="text-3xl font-bold text-zinc-950">
                     {formatPrice(Number(typedProduct.price))}
@@ -481,7 +496,9 @@ export default async function ProductPage({
                     Number(typedProduct.old_price) >
                       Number(typedProduct.price) && (
                       <span className="pb-1 text-base text-zinc-400 line-through">
-                        {formatPrice(Number(typedProduct.old_price))}
+                        {formatPrice(
+                          Number(typedProduct.old_price)
+                        )}
                       </span>
                     )}
 
@@ -491,9 +508,28 @@ export default async function ProductPage({
                     </span>
                   )}
                 </div>
+
+                {/* =================================================
+                    MOBILE ADD TO CART
+                ================================================== */}
+
+                <div className="mt-6">
+                  <AddToCartButton
+                    product={{
+                      id: typedProduct.id,
+                      name: typedProduct.name,
+                      slug: typedProduct.slug,
+                      price: Number(typedProduct.price),
+                      image: typedProduct.image ?? "",
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* Product details */}
+              {/* =================================================
+                  PRODUCT DETAILS
+              ================================================== */}
+
               <div className="mt-8 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
                 <div className="mb-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
@@ -543,7 +579,10 @@ export default async function ProductPage({
                 </div>
               </div>
 
-              {/* Description */}
+              {/* =================================================
+                  DESCRIPTION
+              ================================================== */}
+
               {typedProduct.description && (
                 <div className="mt-8 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
@@ -560,7 +599,10 @@ export default async function ProductPage({
                 </div>
               )}
 
-              {/* Mobile delivery/support information */}
+              {/* =================================================
+                  MOBILE DELIVERY / SUPPORT
+              ================================================== */}
+
               <div className="mt-8 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm lg:hidden">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
                   Shopping information
@@ -578,8 +620,9 @@ export default async function ProductPage({
                       </p>
 
                       <p className="mt-1 text-sm leading-6 text-zinc-500">
-                        Delivery availability and charges are confirmed
-                        according to your location and order.
+                        Delivery availability and charges are
+                        confirmed according to your location and
+                        order.
                       </p>
                     </div>
                   </div>
@@ -595,8 +638,8 @@ export default async function ProductPage({
                       </p>
 
                       <p className="mt-1 text-sm leading-6 text-zinc-500">
-                        Product availability is subject to actual store
-                        inventory.
+                        Product availability is subject to actual
+                        store inventory.
                       </p>
                     </div>
                   </div>
@@ -612,8 +655,8 @@ export default async function ProductPage({
                       </p>
 
                       <p className="mt-1 text-sm leading-6 text-zinc-500">
-                        Contact the store for product or order-related
-                        assistance.
+                        Contact the store for product or
+                        order-related assistance.
                       </p>
                     </div>
                   </div>
@@ -623,9 +666,12 @@ export default async function ProductPage({
 
             {/* =================================================
                 RIGHT SIDE
+                DESKTOP ONLY
             ================================================== */}
-            <div className="min-w-0">
+
+            <div className="hidden min-w-0 lg:block">
               <div className="sticky top-6 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+
                 {/* Category + badge */}
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
@@ -718,7 +764,9 @@ export default async function ProductPage({
                 <div className="mt-7 grid grid-cols-2 gap-3">
                   {typedProduct.size && (
                     <div className="rounded-2xl bg-[#faf9f6] p-4">
-                      <p className="text-xs text-zinc-500">Size</p>
+                      <p className="text-xs text-zinc-500">
+                        Size
+                      </p>
 
                       <p className="mt-1 font-semibold text-zinc-900">
                         {typedProduct.size}
@@ -799,7 +847,7 @@ export default async function ProductPage({
                   </div>
                 )}
 
-                {/* Add to cart */}
+                {/* Desktop Add to Cart */}
                 <div className="mt-8">
                   <AddToCartButton
                     product={{
@@ -897,6 +945,7 @@ export default async function ProductPage({
                     <p className="text-xs font-bold text-zinc-900">
                       Local
                     </p>
+
                     <p className="mt-1 text-[10px] text-zinc-500">
                       Store
                     </p>
@@ -906,6 +955,7 @@ export default async function ProductPage({
                     <p className="text-xs font-bold text-zinc-900">
                       Secure
                     </p>
+
                     <p className="mt-1 text-[10px] text-zinc-500">
                       Ordering
                     </p>
@@ -915,6 +965,7 @@ export default async function ProductPage({
                     <p className="text-xs font-bold text-zinc-900">
                       Support
                     </p>
+
                     <p className="mt-1 text-[10px] text-zinc-500">
                       Available
                     </p>
@@ -927,6 +978,7 @@ export default async function ProductPage({
           {/* ===================================================
               REVIEWS
           ==================================================== */}
+
           <section className="mt-16">
             <ProductReviews productId={typedProduct.id} />
           </section>
@@ -934,6 +986,7 @@ export default async function ProductPage({
           {/* ===================================================
               SUGGESTED PRODUCTS
           ==================================================== */}
+
           {finalSuggestedProducts.length > 0 && (
             <section className="mt-20">
               <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -981,7 +1034,10 @@ export default async function ProductPage({
                             className="h-full w-full object-contain p-5 transition duration-500 group-hover:scale-105"
                           />
                         ) : (
-                          <span className="text-5xl" aria-hidden="true">
+                          <span
+                            className="text-5xl"
+                            aria-hidden="true"
+                          >
                             🍳
                           </span>
                         )}
@@ -1017,7 +1073,9 @@ export default async function ProductPage({
                             Number(item.old_price) >
                               Number(item.price) && (
                               <span className="text-xs text-zinc-400 line-through">
-                                {formatPrice(Number(item.old_price))}
+                                {formatPrice(
+                                  Number(item.old_price)
+                                )}
                               </span>
                             )}
                         </div>
