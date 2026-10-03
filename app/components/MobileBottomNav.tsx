@@ -12,7 +12,6 @@ export default function MobileBottomNav() {
       return;
     }
 
-    // Product page ya kisi doosre page se homepage section par jaane ke liye
     window.location.href = `/#${id}`;
   };
 
@@ -40,75 +39,69 @@ export default function MobileBottomNav() {
     <nav
       className="
         fixed
-        top-0
         left-0
         right-0
-        z-50
+        top-16
+        z-[9999]
         md:hidden
         border-b
         border-zinc-200
-        bg-white/95
-        backdrop-blur-xl
-        shadow-sm
+        bg-white
+        shadow-md
       "
-      aria-label="Mobile navigation"
+      aria-label="Mobile quick navigation"
     >
-      <div className="mx-auto flex h-16 max-w-md items-center justify-between px-2">
-        {/* Home */}
+      <div className="mx-auto flex h-14 w-full max-w-md items-center px-1">
         <button
           type="button"
           onClick={goHome}
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-zinc-700 transition hover:text-amber-600"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-zinc-700 active:text-amber-700"
         >
-          <span className="text-lg leading-none" aria-hidden="true">
+          <span className="text-base leading-none" aria-hidden="true">
             🏠
           </span>
           <span>Home</span>
         </button>
 
-        {/* Categories */}
         <button
           type="button"
           onClick={() => goToSection("categories")}
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-zinc-700 transition hover:text-amber-600"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-zinc-700 active:text-amber-700"
         >
-          <span className="text-lg leading-none" aria-hidden="true">
+          <span className="text-base leading-none" aria-hidden="true">
             ☰
           </span>
           <span>Categories</span>
         </button>
 
-        {/* Products */}
         <button
           type="button"
           onClick={() => goToSection("products")}
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-zinc-700 transition hover:text-amber-600"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-zinc-700 active:text-amber-700"
         >
-          <span className="text-lg leading-none" aria-hidden="true">
+          <span className="text-base leading-none" aria-hidden="true">
             🛍️
           </span>
           <span>Products</span>
         </button>
 
-        {/* Location */}
         <button
           type="button"
           onClick={() => goToSection("location")}
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-zinc-700 transition hover:text-amber-600"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-zinc-700 active:text-amber-700"
         >
-          <span className="text-lg leading-none" aria-hidden="true">
+          <span className="text-base leading-none" aria-hidden="true">
             📍
           </span>
           <span>Location</span>
         </button>
 
-        {/* WhatsApp */}
         <button
           type="button"
           onClick={openWhatsApp}
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-zinc-700 transition hover:text-amber-600"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-zinc-700 active:text-green-700"
         >
-          <span className="text-lg leading-none" aria-hidden="true">
+          <span className="text-base leading-none" aria-hidden="true">
             💬
           </span>
           <span>WhatsApp</span>

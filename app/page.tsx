@@ -23,7 +23,7 @@ const STORE_LATITUDE = 28.605567;
 const STORE_LONGITUDE = 77.0567969;
 
 const mapsLink =
-  "https://maps.app.goo.gl/qBMv1Kw6MHiDPJXw7";
+  "https://maps.app.goo.gl/qBMv1Kw6M6HiDPJXw7";
 
 const whatsappMessage =
   "Hello Dayal Kitchen Ware 👋 I have a query about your products.";
@@ -391,7 +391,7 @@ export default async function Home({
   const heroProduct = allProductList[0] ?? null;
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 text-zinc-900 md:pb-0">
+    <main className="min-h-screen overflow-x-hidden bg-[#faf9f6] pb-24 pt-16 text-zinc-900 md:pb-0 md:pt-0">
 
       <BusinessSchema />
 
@@ -463,12 +463,13 @@ export default async function Home({
                 >
                   About
                 </a>
+
                 <a
-  href="#download-app"
-  className="transition-colors hover:text-amber-700"
->
-  Download App
-</a>
+                  href="#download-app"
+                  className="transition-colors hover:text-amber-700"
+                >
+                  Download App
+                </a>
               </nav>
 
               {/* DESKTOP SEARCH */}
@@ -525,7 +526,6 @@ export default async function Home({
               </a>
 
               <AuthButton />
-             
 
             </div>
 
@@ -637,12 +637,14 @@ export default async function Home({
                     >
                       About
                     </a>
-<a
-  href="#download-app"
-  className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
->
-  Download App
-</a>
+
+                    <a
+                      href="#download-app"
+                      className="rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-zinc-100"
+                    >
+                      Download App
+                    </a>
+
                     {/* MOBILE SEARCH */}
 
                     <form
@@ -751,7 +753,9 @@ export default async function Home({
           </div>
 
         </div>
-<ShopTimingBanner />
+
+        <ShopTimingBanner />
+
       </header>
 
       {/* =====================================================
@@ -765,8 +769,6 @@ export default async function Home({
         >
 
           <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
-
-            {/* HERO TEXT */}
 
             <div className="animate-[fadeInUp_0.7s_ease-out]">
 
@@ -813,8 +815,6 @@ export default async function Home({
               </div>
 
             </div>
-
-            {/* HERO IMAGE */}
 
             <div className="relative min-h-[330px] overflow-hidden rounded-[2rem] bg-white shadow-sm sm:min-h-[500px] sm:rounded-[2.5rem]">
 
@@ -902,7 +902,6 @@ export default async function Home({
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">✓</p>
-
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Quality Products
               </p>
@@ -910,7 +909,6 @@ export default async function Home({
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">₹</p>
-
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Fair Pricing
               </p>
@@ -918,7 +916,6 @@ export default async function Home({
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">💬</p>
-
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Easy Support
               </p>
@@ -926,7 +923,6 @@ export default async function Home({
 
             <div className="px-4 py-6 text-center sm:py-7">
               <p className="text-xl sm:text-2xl">📍</p>
-
               <p className="mt-2 text-xs font-semibold sm:text-sm">
                 Local Store
               </p>
@@ -1043,8 +1039,6 @@ export default async function Home({
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-          {/* HEADER */}
-
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
 
             <div>
@@ -1102,8 +1096,6 @@ export default async function Home({
 
           </div>
 
-          {/* PRODUCT GRID */}
-
           {productList.length > 0 ? (
 
             <>
@@ -1140,16 +1132,12 @@ export default async function Home({
                     "
                   >
 
-                    {/* PRODUCT IMAGE */}
-
                     <ProductCardImage
                       name={product.name}
                       image={product.image}
                       images={product.images}
                       badge={product.badge}
                     />
-
-                    {/* PRODUCT CONTENT */}
 
                     <div className="flex min-h-[310px] flex-col p-4 sm:min-h-[320px] sm:p-6">
 
@@ -1169,16 +1157,12 @@ export default async function Home({
 
                       </div>
 
-                      {/* PRODUCT NAME */}
-
                       <a
                         href={`/products/${product.slug}`}
                         className="mt-3 line-clamp-2 text-base font-bold leading-5 tracking-tight transition duration-200 hover:text-amber-700 sm:text-xl sm:leading-6"
                       >
                         {product.name}
                       </a>
-
-                      {/* PRICE */}
 
                       <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
 
@@ -1216,8 +1200,6 @@ export default async function Home({
 
                       </div>
 
-                      {/* DESCRIPTION */}
-
                       {product.description && (
 
                         <p className="mt-4 line-clamp-3 text-xs leading-5 text-zinc-500 sm:text-sm sm:leading-6">
@@ -1225,8 +1207,6 @@ export default async function Home({
                         </p>
 
                       )}
-
-                      {/* BUTTONS */}
 
                       <div className="mt-auto pt-5 sm:pt-6">
 
@@ -1266,10 +1246,6 @@ Please share more details and availability.`
 
               </div>
 
-              {/* =================================================
-                  VIEW MORE PRODUCTS
-              ================================================= */}
-
               {!isFiltering &&
                 !showAllProducts &&
                 productList.length > 0 && (
@@ -1301,10 +1277,6 @@ Please share more details and availability.`
             </>
 
           ) : (
-
-            /* =================================================
-               NO PRODUCTS
-            ================================================= */
 
             <div className="mt-10 rounded-3xl border border-dashed border-zinc-300 p-10 text-center">
 
@@ -1541,6 +1513,8 @@ Please share more details and availability.`
 
               <div className="mt-7 rounded-3xl border border-white/70 bg-white/70 p-5 shadow-sm backdrop-blur sm:p-6">
 
+                {/* STORE ADDRESS */}
+
                 <div className="flex gap-4">
 
                   <div
@@ -1550,11 +1524,7 @@ Please share more details and availability.`
                     📍
                   </div>
 
-<div className="mt-8">
-  <LocationSelector />
-</div>
-
-                  <div>
+                  <div className="min-w-0 flex-1">
 
                     <p className="text-sm font-bold">
                       Dayal Kitchen Ware
@@ -1567,6 +1537,12 @@ Please share more details and availability.`
 
                   </div>
 
+                </div>
+
+                {/* LOCATION SELECTOR */}
+
+                <div className="mt-5 w-full min-w-0">
+                  <LocationSelector />
                 </div>
 
               </div>
@@ -1954,7 +1930,7 @@ Please share more details and availability.`
       </footer>
 
       {/* =====================================================
-          MOBILE BOTTOM NAVIGATION
+          MOBILE QUICK NAVIGATION
       ===================================================== */}
 
       <MobileBottomNav />
