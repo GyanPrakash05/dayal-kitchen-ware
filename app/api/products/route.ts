@@ -24,9 +24,7 @@ const ALLOWED_TYPES = [
    AUTHENTICATE ADMIN
 ========================================================= */
 
-async function authenticateAdmin(
-  request: Request
-) {
+async function authenticateAdmin(request: Request) {
   if (!adminEmail) {
     return {
       user: null,
@@ -34,21 +32,16 @@ async function authenticateAdmin(
     };
   }
 
-  const authHeader =
-    request.headers.get("authorization");
+  const authHeader = request.headers.get("authorization");
 
-  if (
-    !authHeader ||
-    !authHeader.startsWith("Bearer ")
-  ) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return {
       user: null,
       error: "Authentication required.",
     };
   }
 
-  const token =
-    authHeader.substring(7).trim();
+  const token = authHeader.substring(7).trim();
 
   if (!token) {
     return {
@@ -58,51 +51,43 @@ async function authenticateAdmin(
   }
 
   try {
-   const supabaseAuth = createClient(
-  supabaseUrl,
-  supabasePublishableKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
-
+    /*
+     * IMPORTANT:
+     * Verify the user's access token using the server-side
+     * Supabase admin client.
+     *
+     * This avoids authentication mismatch between the
+     * browser Supabase client and the API route.
+     */
     const {
       data: { user },
       error,
-    } =
-      await supabaseAuth.auth.getUser(
-        token
-      );
+    } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
-      console.error(
-        "ADMIN AUTH ERROR:",
-        error
-      );
+      console.error("ADMIN TOKEN VERIFICATION ERROR:", {
+        message: error?.message,
+        status: error?.status,
+        name: error?.name,
+      });
 
       return {
         user: null,
-        error:
-          "Invalid or expired session.",
+        error: "Invalid or expired session.",
       };
     }
 
-    const userEmail =
-      user.email
-        ?.trim()
-        .toLowerCase();
+    const userEmail = user.email?.trim().toLowerCase();
 
-    if (
-      !userEmail ||
-      userEmail !== adminEmail
-    ) {
+    if (!userEmail || userEmail !== adminEmail) {
+      console.error("ADMIN EMAIL MISMATCH:", {
+        loggedInEmail: userEmail,
+        configuredAdminEmail: adminEmail,
+      });
+
       return {
         user: null,
-        error:
-          "You are not authorized as admin.",
+        error: "You are not authorized as admin.",
       };
     }
 
@@ -111,10 +96,7 @@ async function authenticateAdmin(
       error: null,
     };
   } catch (error) {
-    console.error(
-      "ADMIN AUTH EXCEPTION:",
-      error
-    );
+    console.error("ADMIN AUTH EXCEPTION:", error);
 
     return {
       user: null,

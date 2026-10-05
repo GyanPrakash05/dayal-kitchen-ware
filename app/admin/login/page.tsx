@@ -93,20 +93,46 @@ export default function AdminLoginPage() {
         );
       }
 
-      const { error } =
-        await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
+      const { data, error } =
+  await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password,
+  });
 
-      if (error) {
-        throw new Error(
-          error.message
-        );
-      }
+if (error) {
+  throw new Error(
+    error.message
+  );
+}
 
-      router.replace("/admin");
-      router.refresh();
+console.log(
+  "ADMIN LOGIN SUCCESS:",
+  {
+    userId: data.user?.id,
+    email: data.user?.email,
+    hasSession: !!data.session,
+    hasAccessToken: !!data.session?.access_token,
+  }
+);
+
+const {
+  data: sessionCheck,
+  error: sessionCheckError,
+} =
+  await supabase.auth.getSession();
+
+console.log(
+  "ADMIN SESSION AFTER LOGIN:",
+  {
+    hasSession: !!sessionCheck.session,
+    hasAccessToken:
+      !!sessionCheck.session?.access_token,
+    error: sessionCheckError,
+  }
+);
+
+router.replace("/admin");
+router.refresh();
     } catch (error) {
       console.error(
         "LOGIN ERROR:",

@@ -269,36 +269,38 @@ export default function AdminPage() {
   ========================================================= */
 
   async function getAccessToken() {
-    try {
-      const {
-        data: {
-          session,
-        },
-        error,
-      } =
-        await supabase.auth.getSession();
+  try {
+    // First try to refresh the current Supabase session.
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.refreshSession();
 
-      if (
-        error ||
-        !session?.access_token
-      ) {
-        throw new Error(
-          "Admin session expired. Please login again."
-        );
-      }
-
+    if (!error && session?.access_token) {
       return session.access_token;
-    } catch (error) {
-      console.error(
-        "GET SESSION ERROR:",
-        error
-      );
+    }
 
+    // Fallback: use the currently stored session.
+    const {
+      data: { session: currentSession },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !currentSession?.access_token) {
       throw new Error(
         "Admin session expired. Please login again."
       );
     }
+
+    return currentSession.access_token;
+  } catch (error) {
+    console.error("GET SESSION ERROR:", error);
+
+    throw new Error(
+      "Admin session expired. Please login again."
+    );
   }
+}
 
   /* =========================================================
      FETCH ORDERS
@@ -782,13 +784,17 @@ export default function AdminPage() {
       const data =
         await response.json();
 
-      if (
-        response.status === 401
-      ) {
-        throw new Error(
-          "Admin session expired. Please login again."
-        );
-      }
+      if (response.status === 401) {
+  throw new Error(
+    "Admin authentication failed. Please login again."
+  );
+}
+
+if (response.status === 403) {
+  throw new Error(
+    "You are logged in, but this email is not configured as admin."
+  );
+}
 
       if (
         response.status === 403
@@ -1059,6 +1065,17 @@ export default function AdminPage() {
             Manage orders, products and
             your store.
           </p>
+
+          <button
+  type="button"
+  onClick={async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/admin/login";
+  }}
+  className="rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700"
+>
+  Logout
+</button>
 
         </div>
       </header>
