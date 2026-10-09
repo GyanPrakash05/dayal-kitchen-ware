@@ -40,26 +40,25 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default:
-      "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
+    default: "Dayal Kitchen Ware | Cookware & Kitchen Essentials",
     template: "%s | Dayal Kitchen Ware",
   },
 
   description:
-    "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware in New Delhi.",
+    "Shop cookware, pressure cookers, kitchen utensils, bottles and home essentials at Dayal Kitchen Ware. Explore practical products for everyday cooking and living in New Delhi.",
 
   keywords: [
     "Dayal Kitchen Ware",
     "kitchenware",
     "cookware",
-    "kitchen products",
+    "kitchen utensils",
     "kitchen essentials",
     "pressure cooker",
+    "non stick cookware",
     "cookware sets",
     "kitchen tools",
     "dinner sets",
     "water bottles",
-    "kitchen store",
     "kitchenware store Delhi",
     "kitchenware store New Delhi",
     "cookware store Delhi",
@@ -72,12 +71,9 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title:
-      "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
-
+    title: "Dayal Kitchen Ware | Cookware & Kitchen Essentials",
     description:
-      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware in New Delhi.",
-
+      "Shop cookware, pressure cookers, kitchen utensils, bottles and home essentials at Dayal Kitchen Ware. Explore practical products for everyday cooking and living in New Delhi.",
     url: BASE_URL,
     siteName: STORE_NAME,
     type: "website",
@@ -86,12 +82,9 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-
-    title:
-      "Dayal Kitchen Ware | Kitchenware, Cookware & Kitchen Essentials",
-
+    title: "Dayal Kitchen Ware | Cookware & Kitchen Essentials",
     description:
-      "Shop quality kitchenware, cookware, pressure cookers, bottles, dinner sets and everyday kitchen essentials from Dayal Kitchen Ware in New Delhi.",
+      "Shop cookware, pressure cookers, kitchen utensils, bottles and home essentials at Dayal Kitchen Ware. Explore practical products for everyday cooking and living in New Delhi.",
   },
 
   robots: {
