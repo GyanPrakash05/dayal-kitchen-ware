@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Footer from "./components/Footer";
-
 import "./globals.css";
 
 import { CartProvider } from "./context/CartContext";
@@ -19,9 +18,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-/* =========================================================
-   VIEWPORT
-   ========================================================= */
+/* VIEWPORT */
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -32,22 +29,18 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-/* =========================================================
-   METADATA
-   ========================================================= */
+/* METADATA */
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    "https://dayal-kitchen-ware.vercel.app"
-  ),
+  metadataBase: new URL("https://dayal-kitchen-ware.vercel.app"),
 
   title: {
-    default: "Dayal Kitchen Ware | Kitchenware & Home Essentials",
+    default: "Dayal Kitchen Ware | Cookware & Kitchen Essentials",
     template: "%s | Dayal Kitchen Ware",
   },
 
   description:
-    "Shop quality kitchenware, cookware, kitchen essentials and home products from Dayal Kitchen Ware.",
+    "Shop cookware, pressure cookers, kitchen utensils, bottles and home essentials at Dayal Kitchen Ware. Explore practical products for everyday cooking and living.",
 
   keywords: [
     "Dayal Kitchen Ware",
@@ -74,31 +67,29 @@ export const metadata: Metadata = {
   },
 
   verification: {
-    google:
-      "GSbo3tRpLpp6M0kG2iRNJixeeON3WYASksL9UbzReww",
+    google: "GSbo3tRpLpp6M0kG2iRNJixeeON3WYASksL9UbzReww",
   },
 
   openGraph: {
     type: "website",
-    url: "https://dayal-kitchen-ware.vercel.app",
-    title: "Dayal Kitchen Ware | Kitchenware & Home Essentials",
+    url: "https://dayal-kitchen-ware.vercel.app/",
+    title: "Dayal Kitchen Ware | Cookware & Kitchen Essentials",
     description:
-      "Shop quality kitchenware, cookware, kitchen essentials and home products from Dayal Kitchen Ware.",
+      "Shop cookware, pressure cookers, kitchen utensils, bottles and home essentials at Dayal Kitchen Ware. Explore practical products for everyday cooking and living.",
     siteName: "Dayal Kitchen Ware",
     locale: "en_IN",
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "Dayal Kitchen Ware | Kitchenware & Home Essentials",
+    title: "Dayal Kitchen Ware | Cookware & Kitchen Essentials",
     description:
-      "Shop quality kitchenware, cookware, kitchen essentials and home products from Dayal Kitchen Ware.",
+      "Shop cookware, pressure cookers, kitchen utensils, bottles and home essentials at Dayal Kitchen Ware. Explore practical products for everyday cooking and living.",
   },
 
   robots: {
     index: true,
     follow: true,
-
     googleBot: {
       index: true,
       follow: true,
@@ -117,9 +108,7 @@ export const metadata: Metadata = {
   },
 };
 
-/* =========================================================
-   ROOT LAYOUT
-   ========================================================= */
+/* ROOT LAYOUT */
 
 export default function RootLayout({
   children,
@@ -132,10 +121,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <body className="min-h-screen w-full overflow-x-hidden bg-[#faf9f6] text-zinc-900">
-        {/* =====================================================
-            ORGANIZATION SCHEMA
-        ===================================================== */}
-
+        {/* ORGANIZATION SCHEMA */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -143,17 +129,14 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               name: "Dayal Kitchen Ware",
-              url: "https://dayal-kitchen-ware.vercel.app",
+              url: "https://dayal-kitchen-ware.vercel.app/",
               email: "kitchenware821@gmail.com",
               description: "Quality kitchenware for every home.",
             }),
           }}
         />
 
-        {/* =====================================================
-            STORE SCHEMA
-        ===================================================== */}
-
+        {/* STORE SCHEMA */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -161,7 +144,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Store",
               name: "Dayal Kitchen Ware",
-              url: "https://dayal-kitchen-ware.vercel.app",
+              url: "https://dayal-kitchen-ware.vercel.app/",
               email: "kitchenware821@gmail.com",
               description:
                 "Kitchenware, cookware and home lifestyle products.",
@@ -171,16 +154,14 @@ export default function RootLayout({
         />
 
         <LanguageProvider>
-  <LanguageRuntime />
+          <LanguageRuntime />
 
-  <CartProvider>
-    {children}
-
-    <Footer />
-
-    <FloatingWhatsApp />
-  </CartProvider>
-</LanguageProvider>
+          <CartProvider>
+            {children}
+            <Footer />
+            <FloatingWhatsApp />
+          </CartProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
