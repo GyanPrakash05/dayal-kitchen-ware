@@ -109,11 +109,15 @@ export async function generateMetadata({
   product.slug ===
   "milton-pro-cook-induction-cookware-gas-stove-friendly-kitchen-jewel-set-5-pc-non-stick-cookware-set-kadhai-with-lid-fry-pan-tawa-laddle-spatula-durable-5-layer-non-stick-coating-maroon"
     ? "Milton Pro Cook 5-Piece Non-Stick Cookware Set"
-    : product.name;
+    : product.slug === "hawkins-cooker"
+      ? "Hawkins 3 Litre Aluminium Pressure Cooker"
+      : product.name;
 
-  const description =
-    product.description?.trim() ||
-    `Buy ${product.name} from Dayal Kitchen Ware. Quality kitchenware and home essentials available in India.`;
+const description =
+  product.slug === "hawkins-cooker"
+    ? "Shop the Hawkins 3 Litre Aluminium Pressure Cooker at Dayal Kitchen Ware. Explore its 3-litre capacity, aluminium construction and everyday cooking features."
+    : product.description?.trim() ||
+      `Buy ${product.name} from Dayal Kitchen Ware. Quality kitchenware and home essentials available in India.`;
 
   const productUrl = `${BASE_URL}/products/${product.slug}`;
 
