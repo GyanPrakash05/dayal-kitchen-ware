@@ -105,7 +105,11 @@ export async function generateMetadata({
     };
   }
 
-  const title = product.name;
+  const title =
+  product.slug ===
+  "milton-pro-cook-induction-cookware-gas-stove-friendly-kitchen-jewel-set-5-pc-non-stick-cookware-set-kadhai-with-lid-fry-pan-tawa-laddle-spatula-durable-5-layer-non-stick-coating-maroon"
+    ? "Milton Pro Cook 5-Piece Non-Stick Cookware Set"
+    : product.name;
 
   const description =
     product.description?.trim() ||
