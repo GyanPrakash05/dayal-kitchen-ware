@@ -1,47 +1,110 @@
+
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL!;
+export const runtime = "nodejs";
 
-const supabasePublishableKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-
-const adminEmail =
-  process.env.ADMIN_EMAIL?.trim().toLowerCase();
-
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+const STORAGE_BUCKET = "products";
 const MAX_IMAGES = 5;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-const ALLOWED_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
+type ProductDetails = {
+  brand: string | null;
+  size: string | null;
+  material: string | null;
+  capacity: string | null;
+  colour: string | null;
+  warranty: string | null;
+  model_number: string | null;
+};
+
+type ProductRecord = Record<string, unknown>;
+
+function textValue(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function nullableText(formData: FormData, key: string): string | null {
+  return textValue(formData, key) || null;
+}
+
+function readDetails(formData: FormData): ProductDetails {
+  return {
+    brand: nullableText(formData, "brand"),
+    size: nullableText(formData, "size"),
+    material: nullableText(formData, "material"),
+    capacity: nullableText(formData, "capacity"),
+    colour: nullableText(formData, "colour"),
+    warranty: nullableText(formData, "warranty"),
+    model_number:
+      nullableText(formData, "model_number") ||
+      nullableText(formData, "modelNumber") ||
+      nullableText(formData, "sku"),
+  };
+}
+
+/* Preserve existing details when an edit request omits those fields. */
+function readUpdatedDetails(
+  formData: FormData,
+  existing: ProductRecord
+): ProductDetails {
+  const submitted = readDetails(formData);
+
+  const modelNumberProvided =
+    formData.has("model_number") ||
+    formData.has("modelNumber") ||
+    formData.has("sku");
+
+  return {
+    brand: formData.has("brand")
+      ? submitted.brand
+      : (existing.brand as string | null) ?? null,
+    size: formData.has("size")
+      ? submitted.size
+      : (existing.size as string | null) ?? null,
+    material: formData.has("material")
+      ? submitted.material
+      : (existing.material as string | null) ?? null,
+    capacity: formData.has("capacity")
+      ? submitted.capacity
+      : (existing.capacity as string | null) ?? null,
+    colour: formData.has("colour")
+      ? submitted.colour
+      : (existing.colour as string | null) ?? null,
+    warranty: formData.has("warranty")
+      ? submitted.warranty
+      : (existing.warranty as string | null) ?? null,
+    model_number: modelNumberProvided
+      ? submitted.model_number
+      : (existing.model_number as string | null) ?? null,
+  };
+}
 
 /* =========================================================
-   AUTHENTICATE ADMIN
+   ADMIN AUTHENTICATION
 ========================================================= */
 
 async function authenticateAdmin(request: Request) {
-  if (!adminEmail) {
+  if (!ADMIN_EMAIL) {
     return {
       user: null,
       error: "ADMIN_EMAIL is not configured.",
     };
   }
 
-  const authHeader = request.headers.get("authorization");
+  const authorization = request.headers.get("authorization");
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authorization?.startsWith("Bearer ")) {
     return {
       user: null,
       error: "Authentication required.",
     };
   }
 
-  const token = authHeader.substring(7).trim();
+  const token = authorization.slice(7).trim();
 
   if (!token) {
     return {
@@ -51,14 +114,6 @@ async function authenticateAdmin(request: Request) {
   }
 
   try {
-    /*
-     * IMPORTANT:
-     * Verify the user's access token using the server-side
-     * Supabase admin client.
-     *
-     * This avoids authentication mismatch between the
-     * browser Supabase client and the API route.
-     */
     const {
       data: { user },
       error,
@@ -68,21 +123,20 @@ async function authenticateAdmin(request: Request) {
       console.error("ADMIN TOKEN VERIFICATION ERROR:", {
         message: error?.message,
         status: error?.status,
-        name: error?.name,
       });
 
       return {
         user: null,
-        error: "Invalid or expired session.",
+        error: "Invalid or expired session. Please login again.",
       };
     }
 
-    const userEmail = user.email?.trim().toLowerCase();
+    const email = user.email?.trim().toLowerCase();
 
-    if (!userEmail || userEmail !== adminEmail) {
+    if (!email || email !== ADMIN_EMAIL) {
       console.error("ADMIN EMAIL MISMATCH:", {
-        loggedInEmail: userEmail,
-        configuredAdminEmail: adminEmail,
+        loggedInEmail: email,
+        configuredAdminEmail: ADMIN_EMAIL,
       });
 
       return {
@@ -91,10 +145,7 @@ async function authenticateAdmin(request: Request) {
       };
     }
 
-    return {
-      user,
-      error: null,
-    };
+    return { user, error: null };
   } catch (error) {
     console.error("ADMIN AUTH EXCEPTION:", error);
 
@@ -106,97 +157,190 @@ async function authenticateAdmin(request: Request) {
 }
 
 /* =========================================================
-   SLUG
+   SLUG HELPERS
 ========================================================= */
 
-function createSlug(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function createSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || `product-${Date.now()}`
+  );
+}
+
+async function createUniqueSlug(
+  name: string,
+  excludeId?: string
+): Promise<string> {
+  const baseSlug = createSlug(name);
+
+  let query = supabaseAdmin
+    .from("products")
+    .select("id")
+    .eq("slug", baseSlug);
+
+  if (excludeId) {
+    query = query.neq("id", excludeId);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    throw new Error(`Could not verify product slug: ${error.message}`);
+  }
+
+  return data ? `${baseSlug}-${Date.now()}` : baseSlug;
 }
 
 /* =========================================================
-   GET FILE NAME FROM STORAGE URL
+   IMAGE HELPERS
 ========================================================= */
 
+function getExtension(type: string): string {
+  if (type === "image/png") return "png";
+  if (type === "image/webp") return "webp";
+  return "jpg";
+}
+
+function getImageFiles(formData: FormData): File[] {
+  return formData.getAll("images").filter(
+    (item): item is File =>
+      typeof item !== "string" &&
+      item instanceof File &&
+      item.size > 0
+  );
+}
+
+function validateImages(images: File[]): string | null {
+  if (images.length > MAX_IMAGES) {
+    return `You can upload a maximum of ${MAX_IMAGES} images.`;
+  }
+
+  for (const image of images) {
+    if (image.size > MAX_IMAGE_SIZE) {
+      return `Image "${image.name}" must be smaller than 5MB.`;
+    }
+
+    if (!ALLOWED_TYPES.includes(image.type)) {
+      return `Image "${image.name}" must be JPG, PNG or WEBP.`;
+    }
+  }
+
+  return null;
+}
+
 function getFileNameFromUrl(
-  imageUrl: string | null
-) {
+  imageUrl: string | null | undefined
+): string | null {
   if (!imageUrl) return null;
 
   try {
-    const url = new URL(imageUrl);
+    const pathname = decodeURIComponent(new URL(imageUrl).pathname);
+    const marker = `/${STORAGE_BUCKET}/`;
+    const index = pathname.indexOf(marker);
 
-    const pathname =
-      decodeURIComponent(
-        url.pathname
-      );
+    if (index === -1) return null;
 
-    const marker = "/products/";
-
-    const index =
-      pathname.indexOf(marker);
-
-    if (index === -1) {
-      return null;
-    }
-
-    return pathname.substring(
-      index + marker.length
-    );
+    return pathname.slice(index + marker.length) || null;
   } catch {
     return null;
   }
 }
 
-/* =========================================================
-   IMAGE EXTENSION
-========================================================= */
+function getProductImages(product: ProductRecord): string[] {
+  const gallery = Array.isArray(product.images)
+    ? product.images.filter(
+        (item): item is string => typeof item === "string"
+      )
+    : [];
 
-function getExtension(
-  type: string
-) {
-  if (type === "image/png") {
-    return "png";
+  if (gallery.length > 0) return gallery;
+
+  return typeof product.image === "string" && product.image
+    ? [product.image]
+    : [];
+}
+
+async function removeStorageFiles(files: string[]): Promise<void> {
+  const uniqueFiles = [...new Set(files.filter(Boolean))];
+
+  if (uniqueFiles.length === 0) return;
+
+  const { error } = await supabaseAdmin.storage
+    .from(STORAGE_BUCKET)
+    .remove(uniqueFiles);
+
+  if (error) {
+    console.error("STORAGE CLEANUP ERROR:", error.message);
   }
+}
 
-  if (type === "image/webp") {
-    return "webp";
+async function uploadImages(
+  images: File[],
+  slug: string
+): Promise<{ urls: string[]; files: string[] }> {
+  const urls: string[] = [];
+  const files: string[] = [];
+
+  try {
+    for (let index = 0; index < images.length; index++) {
+      const image = images[index];
+      const extension = getExtension(image.type);
+      const suffix = Math.random().toString(36).slice(2, 8);
+      const fileName =
+        `${slug}-${index + 1}-${Date.now()}-${suffix}.${extension}`;
+
+      const buffer = Buffer.from(await image.arrayBuffer());
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from(STORAGE_BUCKET)
+        .upload(fileName, buffer, {
+          contentType: image.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Image upload failed: ${uploadError.message}`);
+      }
+
+      files.push(fileName);
+
+      const { data } = supabaseAdmin.storage
+        .from(STORAGE_BUCKET)
+        .getPublicUrl(fileName);
+
+      urls.push(data.publicUrl);
+    }
+
+    return { urls, files };
+  } catch (error) {
+    await removeStorageFiles(files);
+    throw error;
   }
+}
 
-  return "jpg";
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 /* =========================================================
-   GET PRODUCTS
-   PUBLIC
+   GET PRODUCTS — PUBLIC
 ========================================================= */
 
 export async function GET() {
   try {
-    const {
-      data,
-      error,
-    } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("products")
       .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error(
-        "SUPABASE GET ERROR:",
-        error
-      );
+      console.error("SUPABASE GET ERROR:", error);
 
       return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
+        { success: false, error: error.message },
         { status: 500 }
       );
     }
@@ -206,173 +350,70 @@ export async function GET() {
       products: data ?? [],
     });
   } catch (error) {
-    console.error(
-      "GET PRODUCTS API ERROR:",
-      error
-    );
+    console.error("GET PRODUCTS API ERROR:", error);
 
     return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Failed to fetch products.",
-      },
+      { success: false, error: "Failed to fetch products." },
       { status: 500 }
     );
   }
 }
 
 /* =========================================================
-   POST PRODUCT
-   ADMIN ONLY
+   POST PRODUCT — ADMIN ONLY
 ========================================================= */
 
-export async function POST(
-  request: Request
-) {
-  const uploadedFiles: string[] = [];
+export async function POST(request: Request) {
+  let uploadedFiles: string[] = [];
 
   try {
-    /* -----------------------------------------------------
-       ADMIN AUTH
-    ----------------------------------------------------- */
-
-    const auth =
-      await authenticateAdmin(
-        request
-      );
+    const auth = await authenticateAdmin(request);
 
     if (!auth.user) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            auth.error ||
-            "Unauthorized.",
+          error: auth.error || "Unauthorized.",
         },
         { status: 401 }
       );
     }
 
-    /* -----------------------------------------------------
-       FORM DATA
-    ----------------------------------------------------- */
+    const formData = await request.formData();
 
-    const formData =
-      await request.formData();
+    const name = textValue(formData, "name");
+    const category = textValue(formData, "category");
+    const priceValue = textValue(formData, "price");
+    const price = Number(priceValue);
 
-    const name =
-      String(
-        formData.get("name") ||
-          ""
-      ).trim();
+    const oldPriceValue = textValue(formData, "oldPrice");
+    const oldPrice = oldPriceValue ? Number(oldPriceValue) : null;
 
-    const category =
-      String(
-        formData.get(
-          "category"
-        ) || ""
-      ).trim();
+    const badge = nullableText(formData, "badge");
+    const description = textValue(formData, "description");
+    const details = readDetails(formData);
+    const images = getImageFiles(formData);
 
-    const priceValue =
-      String(
-        formData.get("price") ||
-          ""
-      ).trim();
-
-    const price =
-      Number(priceValue);
-
-    const oldPriceValue =
-      String(
-        formData.get(
-          "oldPrice"
-        ) || ""
-      ).trim();
-
-    const oldPrice =
-      oldPriceValue
-        ? Number(oldPriceValue)
-        : null;
-
-    const badge =
-      String(
-        formData.get("badge") ||
-          ""
-      ).trim() || null;
-
-    const description =
-      String(
-        formData.get(
-          "description"
-        ) || ""
-      ).trim();
-
-    /* -----------------------------------------------------
-       IMAGES
-    ----------------------------------------------------- */
-
-    const imageEntries =
-      formData.getAll(
-        "images"
-      );
-
-    const images =
-      imageEntries.filter(
-        (
-          item
-        ): item is File =>
-          item instanceof File &&
-          item.size > 0
-      );
-
-    /* -----------------------------------------------------
-       VALIDATION
-    ----------------------------------------------------- */
-
-    if (
-      !name ||
-      !category ||
-      !priceValue ||
-      !description
-    ) {
+    if (!name || !category || !priceValue || !description) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Please fill all required fields.",
-        },
+        { success: false, error: "Please fill all required fields." },
         { status: 400 }
       );
     }
 
-    if (
-      !Number.isFinite(price) ||
-      price <= 0
-    ) {
+    if (!Number.isFinite(price) || price <= 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Please enter a valid price.",
-        },
+        { success: false, error: "Please enter a valid price." },
         { status: 400 }
       );
     }
 
     if (
       oldPrice !== null &&
-      (!Number.isFinite(
-        oldPrice
-      ) ||
-        oldPrice <= 0)
+      (!Number.isFinite(oldPrice) || oldPrice <= 0)
     ) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Please enter a valid old price.",
-        },
+        { success: false, error: "Please enter a valid old price." },
         { status: 400 }
       );
     }
@@ -381,251 +422,71 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Please select at least one product image.",
+          error: "Please select at least one product image.",
         },
         { status: 400 }
       );
     }
 
-    if (
-      images.length >
-      MAX_IMAGES
-    ) {
+    const imageError = validateImages(images);
+
+    if (imageError) {
       return NextResponse.json(
-        {
-          success: false,
-          error: `You can upload maximum ${MAX_IMAGES} images.`,
-        },
+        { success: false, error: imageError },
         { status: 400 }
       );
     }
 
-    /* -----------------------------------------------------
-       IMAGE VALIDATION
-    ----------------------------------------------------- */
+    const slug = await createUniqueSlug(name);
+    const uploaded = await uploadImages(images, slug);
 
-    for (const image of images) {
-      if (
-        image.size >
-        MAX_IMAGE_SIZE
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Image "${image.name}" must be smaller than 5MB.`,
-          },
-          { status: 400 }
-        );
-      }
+    uploadedFiles = uploaded.files;
 
-      if (
-        !ALLOWED_TYPES.includes(
-          image.type
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Image "${image.name}" must be JPG, PNG or WEBP.`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    /* -----------------------------------------------------
-       SLUG
-    ----------------------------------------------------- */
-
-    let slug =
-      createSlug(name);
-
-    const {
-      data: existingProduct,
-    } = await supabaseAdmin
+    /* INSERT PRODUCT AND ALL OPTIONAL DETAILS */
+    const { data, error } = await supabaseAdmin
       .from("products")
-      .select("id")
-      .eq("slug", slug)
-      .maybeSingle();
-
-    if (existingProduct) {
-      slug = `${slug}-${Date.now()}`;
-    }
-
-    /* -----------------------------------------------------
-       UPLOAD IMAGES
-    ----------------------------------------------------- */
-
-    const imageUrls: string[] =
-      [];
-
-    for (
-      let index = 0;
-      index < images.length;
-      index++
-    ) {
-      const image =
-        images[index];
-
-      const extension =
-        getExtension(
-          image.type
-        );
-
-      const fileName =
-        `${slug}-${index + 1}-${Date.now()}.${extension}`;
-
-      const arrayBuffer =
-        await image.arrayBuffer();
-
-      const buffer =
-        Buffer.from(
-          arrayBuffer
-        );
-
-      const {
-        error: uploadError,
-      } =
-        await supabaseAdmin.storage
-          .from("products")
-          .upload(
-            fileName,
-            buffer,
-            {
-              contentType:
-                image.type,
-              upsert: false,
-            }
-          );
-
-      if (uploadError) {
-        console.error(
-          "SUPABASE IMAGE UPLOAD ERROR:",
-          uploadError
-        );
-
-        if (
-          uploadedFiles.length >
-          0
-        ) {
-          await supabaseAdmin.storage
-            .from("products")
-            .remove(
-              uploadedFiles
-            );
-        }
-
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Image upload failed: ${uploadError.message}`,
-          },
-          { status: 500 }
-        );
-      }
-
-      uploadedFiles.push(
-        fileName
-      );
-
-      const {
-        data: {
-          publicUrl,
-        },
-      } =
-        supabaseAdmin.storage
-          .from("products")
-          .getPublicUrl(
-            fileName
-          );
-
-      imageUrls.push(
-        publicUrl
-      );
-    }
-
-    /* -----------------------------------------------------
-       INSERT PRODUCT
-    ----------------------------------------------------- */
-
-    const {
-      data,
-      error,
-    } =
-      await supabaseAdmin
-        .from("products")
-        .insert({
-          name,
-          slug,
-          category,
-          price,
-          old_price:
-            oldPrice,
-          badge,
-          image:
-            imageUrls[0],
-          images:
-            imageUrls,
-          description,
-        })
-        .select()
-        .single();
+      .insert({
+        name,
+        slug,
+        category,
+        price,
+        old_price: oldPrice,
+        badge,
+        image: uploaded.urls[0],
+        images: uploaded.urls,
+        description,
+        ...details,
+      })
+      .select()
+      .single();
 
     if (error) {
-      console.error(
-        "SUPABASE INSERT ERROR:",
-        error
-      );
-
-      if (
-        uploadedFiles.length >
-        0
-      ) {
-        await supabaseAdmin.storage
-          .from("products")
-          .remove(
-            uploadedFiles
-          );
-      }
+      console.error("SUPABASE PRODUCT INSERT ERROR:", error);
+      await removeStorageFiles(uploadedFiles);
+      uploadedFiles = [];
 
       return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
+        { success: false, error: error.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      product: data,
-      message:
-        "Product added successfully.",
-    });
-  } catch (error) {
-    console.error(
-      "POST PRODUCTS API ERROR:",
-      error
+    return NextResponse.json(
+      {
+        success: true,
+        product: data,
+        message: "Product added successfully.",
+      },
+      { status: 201 }
     );
-
-    if (
-      uploadedFiles.length >
-      0
-    ) {
-      await supabaseAdmin.storage
-        .from("products")
-        .remove(
-          uploadedFiles
-        );
-    }
+  } catch (error) {
+    console.error("POST PRODUCTS API ERROR:", error);
+    await removeStorageFiles(uploadedFiles);
 
     return NextResponse.json(
       {
         success: false,
-        error:
-          "Invalid request.",
+        error: errorMessage(error, "Failed to add product."),
       },
       { status: 500 }
     );
@@ -633,523 +494,167 @@ export async function POST(
 }
 
 /* =========================================================
-   PATCH PRODUCT
-   ADMIN ONLY
+   PATCH PRODUCT — ADMIN ONLY
 ========================================================= */
 
-export async function PATCH(
-  request: Request
-) {
-  const uploadedFiles: string[] = [];
+export async function PATCH(request: Request) {
+  let uploadedFiles: string[] = [];
 
   try {
-    /* -----------------------------------------------------
-       ADMIN AUTH
-    ----------------------------------------------------- */
-
-    const auth =
-      await authenticateAdmin(
-        request
-      );
+    const auth = await authenticateAdmin(request);
 
     if (!auth.user) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            auth.error ||
-            "Unauthorized.",
+          error: auth.error || "Unauthorized.",
         },
         { status: 401 }
       );
     }
 
-    /* -----------------------------------------------------
-       FORM DATA
-    ----------------------------------------------------- */
-
-    const formData =
-      await request.formData();
-
-    const id =
-      String(
-        formData.get("id") ||
-          ""
-      ).trim();
+    const formData = await request.formData();
+    const id = textValue(formData, "id");
 
     if (!id) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Product ID is required.",
-        },
+        { success: false, error: "Product ID is required." },
         { status: 400 }
       );
     }
 
-    const name =
-      String(
-        formData.get("name") ||
-          ""
-      ).trim();
+    const name = textValue(formData, "name");
+    const category = textValue(formData, "category");
+    const priceValue = textValue(formData, "price");
+    const price = Number(priceValue);
 
-    const category =
-      String(
-        formData.get(
-          "category"
-        ) || ""
-      ).trim();
+    const oldPriceValue = textValue(formData, "oldPrice");
+    const oldPrice = oldPriceValue ? Number(oldPriceValue) : null;
 
-    const priceValue =
-      String(
-        formData.get("price") ||
-          ""
-      ).trim();
+    const badge = nullableText(formData, "badge");
+    const description = textValue(formData, "description");
 
-    const price =
-      Number(priceValue);
-
-    const oldPriceValue =
-      String(
-        formData.get(
-          "oldPrice"
-        ) || ""
-      ).trim();
-
-    const oldPrice =
-      oldPriceValue
-        ? Number(oldPriceValue)
-        : null;
-
-    const badge =
-      String(
-        formData.get("badge") ||
-          ""
-      ).trim() || null;
-
-    const description =
-      String(
-        formData.get(
-          "description"
-        ) || ""
-      ).trim();
-
-    /* -----------------------------------------------------
-       VALIDATION
-    ----------------------------------------------------- */
-
-    if (
-      !name ||
-      !category ||
-      !priceValue ||
-      !description
-    ) {
+    if (!name || !category || !priceValue || !description) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Please fill all required fields.",
-        },
+        { success: false, error: "Please fill all required fields." },
         { status: 400 }
       );
     }
 
-    if (
-      !Number.isFinite(price) ||
-      price <= 0
-    ) {
+    if (!Number.isFinite(price) || price <= 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Please enter a valid price.",
-        },
+        { success: false, error: "Please enter a valid price." },
         { status: 400 }
       );
     }
 
     if (
       oldPrice !== null &&
-      (!Number.isFinite(
-        oldPrice
-      ) ||
-        oldPrice <= 0)
+      (!Number.isFinite(oldPrice) || oldPrice <= 0)
     ) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Please enter a valid old price.",
-        },
+        { success: false, error: "Please enter a valid old price." },
         { status: 400 }
       );
     }
-
-    /* -----------------------------------------------------
-       GET EXISTING PRODUCT
-    ----------------------------------------------------- */
 
     const {
       data: existingProduct,
       error: existingError,
-    } =
-      await supabaseAdmin
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
+    } = await supabaseAdmin
+      .from("products")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-    if (
-      existingError ||
-      !existingProduct
-    ) {
+    if (existingError || !existingProduct) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Product not found.",
-        },
+        { success: false, error: "Product not found." },
         { status: 404 }
       );
     }
 
-    /* -----------------------------------------------------
-       SLUG
-    ----------------------------------------------------- */
+    const existing = existingProduct as ProductRecord;
+    const details = readUpdatedDetails(formData, existing);
+    const slug = await createUniqueSlug(name, id);
+    const existingImages = getProductImages(existing);
+    const newImages = getImageFiles(formData);
 
-    let slug =
-      createSlug(name);
+    const imageError = validateImages(newImages);
 
-    const {
-      data: slugProduct,
-    } =
-      await supabaseAdmin
-        .from("products")
-        .select("id")
-        .eq("slug", slug)
-        .neq("id", id)
-        .maybeSingle();
-
-    if (slugProduct) {
-      slug = `${slug}-${Date.now()}`;
-    }
-
-    /* -----------------------------------------------------
-       EXISTING IMAGES
-    ----------------------------------------------------- */
-
-    const existingImages: string[] =
-      Array.isArray(
-        existingProduct.images
-      )
-        ? existingProduct.images
-        : existingProduct.image
-        ? [
-            existingProduct.image,
-          ]
-        : [];
-
-    let imageUrls =
-      existingImages;
-
-    /* -----------------------------------------------------
-       NEW IMAGES
-    ----------------------------------------------------- */
-
-    const imageEntries =
-      formData.getAll(
-        "images"
-      );
-
-    const newImages =
-      imageEntries.filter(
-        (
-          item
-        ): item is File =>
-          item instanceof File &&
-          item.size > 0
-      );
-
-    if (
-      newImages.length >
-      MAX_IMAGES
-    ) {
+    if (imageError) {
       return NextResponse.json(
-        {
-          success: false,
-          error: `You can upload maximum ${MAX_IMAGES} images.`,
-        },
+        { success: false, error: imageError },
         { status: 400 }
       );
     }
 
-    /* -----------------------------------------------------
-       VALIDATE NEW IMAGES
-    ----------------------------------------------------- */
+    let imageUrls = existingImages;
 
-    for (const image of newImages) {
-      if (
-        image.size >
-        MAX_IMAGE_SIZE
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Image "${image.name}" must be smaller than 5MB.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        !ALLOWED_TYPES.includes(
-          image.type
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Image "${image.name}" must be JPG, PNG or WEBP.`,
-          },
-          { status: 400 }
-        );
-      }
+    /* Upload replacement images but keep old images until DB update succeeds. */
+    if (newImages.length > 0) {
+      const uploaded = await uploadImages(newImages, slug);
+      uploadedFiles = uploaded.files;
+      imageUrls = uploaded.urls;
     }
-
-    /* -----------------------------------------------------
-       UPLOAD NEW IMAGES
-    ----------------------------------------------------- */
-
-    if (
-      newImages.length >
-      0
-    ) {
-      const newImageUrls: string[] =
-        [];
-
-      for (
-        let index = 0;
-        index <
-        newImages.length;
-        index++
-      ) {
-        const image =
-          newImages[index];
-
-        const extension =
-          getExtension(
-            image.type
-          );
-
-        const fileName =
-          `${slug}-${index + 1}-${Date.now()}.${extension}`;
-
-        const arrayBuffer =
-          await image.arrayBuffer();
-
-        const buffer =
-          Buffer.from(
-            arrayBuffer
-          );
-
-        const {
-          error: uploadError,
-        } =
-          await supabaseAdmin.storage
-            .from("products")
-            .upload(
-              fileName,
-              buffer,
-              {
-                contentType:
-                  image.type,
-                upsert: false,
-              }
-            );
-
-        if (uploadError) {
-          console.error(
-            "IMAGE UPDATE UPLOAD ERROR:",
-            uploadError
-          );
-
-          if (
-            uploadedFiles.length >
-            0
-          ) {
-            await supabaseAdmin.storage
-              .from("products")
-              .remove(
-                uploadedFiles
-              );
-          }
-
-          return NextResponse.json(
-            {
-              success: false,
-              error: `Image upload failed: ${uploadError.message}`,
-            },
-            { status: 500 }
-          );
-        }
-
-        uploadedFiles.push(
-          fileName
-        );
-
-        const {
-          data: {
-            publicUrl,
-          },
-        } =
-          supabaseAdmin.storage
-            .from("products")
-            .getPublicUrl(
-              fileName
-            );
-
-        newImageUrls.push(
-          publicUrl
-        );
-      }
-
-      /* ---------------------------------------------------
-         REPLACE COMPLETE GALLERY
-      --------------------------------------------------- */
-
-      imageUrls =
-        newImageUrls;
-
-      /* ---------------------------------------------------
-         DELETE OLD IMAGES
-      --------------------------------------------------- */
-
-      const oldFiles =
-        existingImages
-          .map(
-            getFileNameFromUrl
-          )
-          .filter(
-            (
-              file
-            ): file is string =>
-              Boolean(file)
-          );
-
-      if (
-        oldFiles.length >
-        0
-      ) {
-        const {
-          error: removeError,
-        } =
-          await supabaseAdmin.storage
-            .from("products")
-            .remove(
-              oldFiles
-            );
-
-        if (removeError) {
-          console.warn(
-            "OLD IMAGES DELETE WARNING:",
-            removeError.message
-          );
-        }
-      }
-    }
-
-    /* -----------------------------------------------------
-       MAIN IMAGE
-    ----------------------------------------------------- */
 
     const mainImage =
-      imageUrls.length > 0
-        ? imageUrls[0]
-        : existingProduct.image;
+      imageUrls[0] ||
+      (typeof existing.image === "string" ? existing.image : null);
 
-    /* -----------------------------------------------------
-       UPDATE DATABASE
-    ----------------------------------------------------- */
-
-    const {
-      data,
-      error,
-    } =
-      await supabaseAdmin
-        .from("products")
-        .update({
-          name,
-          slug,
-          category,
-          price,
-          old_price:
-            oldPrice,
-          badge,
-          image:
-            mainImage,
-          images:
-            imageUrls,
-          description,
-        })
-        .eq("id", id)
-        .select()
-        .single();
+    /* UPDATE PRODUCT AND ALL OPTIONAL DETAILS */
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .update({
+        name,
+        slug,
+        category,
+        price,
+        old_price: oldPrice,
+        badge,
+        image: mainImage,
+        images: imageUrls,
+        description,
+        ...details,
+      })
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) {
-      console.error(
-        "SUPABASE UPDATE ERROR:",
-        error
-      );
-
-      if (
-        uploadedFiles.length >
-        0
-      ) {
-        await supabaseAdmin.storage
-          .from("products")
-          .remove(
-            uploadedFiles
-          );
-      }
+      console.error("SUPABASE PRODUCT UPDATE ERROR:", error);
+      await removeStorageFiles(uploadedFiles);
+      uploadedFiles = [];
 
       return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
+        { success: false, error: error.message },
         { status: 500 }
       );
+    }
+
+    /* Remove old images only after the database update succeeds. */
+    if (newImages.length > 0) {
+      const oldFiles = existingImages
+        .map(getFileNameFromUrl)
+        .filter((file): file is string => Boolean(file));
+
+      await removeStorageFiles(oldFiles);
+      uploadedFiles = [];
     }
 
     return NextResponse.json({
       success: true,
       product: data,
-      message:
-        "Product updated successfully.",
+      message: "Product updated successfully.",
     });
   } catch (error) {
-    console.error(
-      "PATCH PRODUCTS API ERROR:",
-      error
-    );
-
-    if (
-      uploadedFiles.length >
-      0
-    ) {
-      await supabaseAdmin.storage
-        .from("products")
-        .remove(
-          uploadedFiles
-        );
-    }
+    console.error("PATCH PRODUCTS API ERROR:", error);
+    await removeStorageFiles(uploadedFiles);
 
     return NextResponse.json(
       {
         success: false,
-        error:
-          "Failed to update product.",
+        error: errorMessage(error, "Failed to update product."),
       },
       { status: 500 }
     );
@@ -1157,176 +662,80 @@ export async function PATCH(
 }
 
 /* =========================================================
-   DELETE PRODUCT
-   ADMIN ONLY
+   DELETE PRODUCT — ADMIN ONLY
 ========================================================= */
 
-export async function DELETE(
-  request: Request
-) {
+export async function DELETE(request: Request) {
   try {
-    /* -----------------------------------------------------
-       ADMIN AUTH
-    ----------------------------------------------------- */
-
-    const auth =
-      await authenticateAdmin(
-        request
-      );
+    const auth = await authenticateAdmin(request);
 
     if (!auth.user) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            auth.error ||
-            "Unauthorized.",
+          error: auth.error || "Unauthorized.",
         },
         { status: 401 }
       );
     }
 
-    /* -----------------------------------------------------
-       REQUEST BODY
-    ----------------------------------------------------- */
-
-    const body =
-      await request.json();
-
-    const id =
-      String(
-        body.id || ""
-      ).trim();
+    const body = await request.json().catch(() => null);
+    const id = String(body?.id || "").trim();
 
     if (!id) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Product ID is required.",
-        },
+        { success: false, error: "Product ID is required." },
         { status: 400 }
       );
     }
 
-    /* -----------------------------------------------------
-       GET PRODUCT
-    ----------------------------------------------------- */
-
     const {
       data: product,
       error: fetchError,
-    } =
-      await supabaseAdmin
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
+    } = await supabaseAdmin
+      .from("products")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-    if (
-      fetchError ||
-      !product
-    ) {
+    if (fetchError || !product) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Product not found.",
-        },
+        { success: false, error: "Product not found." },
         { status: 404 }
       );
     }
 
-    /* -----------------------------------------------------
-       DELETE DATABASE PRODUCT
-    ----------------------------------------------------- */
-
-    const {
-      error: deleteError,
-    } =
-      await supabaseAdmin
-        .from("products")
-        .delete()
-        .eq("id", id);
+    const { error: deleteError } = await supabaseAdmin
+      .from("products")
+      .delete()
+      .eq("id", id);
 
     if (deleteError) {
-      console.error(
-        "SUPABASE DELETE ERROR:",
-        deleteError
-      );
+      console.error("SUPABASE PRODUCT DELETE ERROR:", deleteError);
 
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            deleteError.message,
-        },
+        { success: false, error: deleteError.message },
         { status: 500 }
       );
     }
 
-    /* -----------------------------------------------------
-       DELETE PRODUCT IMAGES
-    ----------------------------------------------------- */
+    const files = getProductImages(product as ProductRecord)
+      .map(getFileNameFromUrl)
+      .filter((file): file is string => Boolean(file));
 
-    const productImages: string[] =
-      Array.isArray(
-        product.images
-      )
-        ? product.images
-        : product.image
-        ? [product.image]
-        : [];
-
-    const fileNames =
-      productImages
-        .map(
-          getFileNameFromUrl
-        )
-        .filter(
-          (
-            file
-          ): file is string =>
-            Boolean(file)
-        );
-
-    if (
-      fileNames.length >
-      0
-    ) {
-      const {
-        error: removeError,
-      } =
-        await supabaseAdmin.storage
-          .from("products")
-          .remove(
-            fileNames
-          );
-
-      if (removeError) {
-        console.warn(
-          "IMAGE DELETE WARNING:",
-          removeError.message
-        );
-      }
-    }
+    await removeStorageFiles(files);
 
     return NextResponse.json({
       success: true,
-      message:
-        "Product deleted successfully.",
+      message: "Product deleted successfully.",
     });
   } catch (error) {
-    console.error(
-      "DELETE PRODUCTS API ERROR:",
-      error
-    );
+    console.error("DELETE PRODUCTS API ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error:
-          "Failed to delete product.",
+        error: errorMessage(error, "Failed to delete product."),
       },
       { status: 500 }
     );

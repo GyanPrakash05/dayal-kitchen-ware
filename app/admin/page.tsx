@@ -9,6 +9,13 @@ import {
 import { supabase } from "@/app/lib/supabase";
 
 type Product = {
+    brand: string | null;
+  size: string | null;
+  material: string | null;
+  capacity: string | null;
+  colour: string | null;
+  warranty: string | null;
+  model_number: string | null;
   id: string;
   name: string;
   slug: string;
@@ -2007,6 +2014,74 @@ if (response.status === 403) {
                 </p>
 
               </div>
+
+              
+              {/* ADDITIONAL PRODUCT DETAILS */}
+
+              {[
+                {
+                  name: "brand",
+                  label: "Brand",
+                  placeholder: "e.g. Milton, Hawkins",
+                },
+                {
+                  name: "size",
+                  label: "Size",
+                  placeholder: "e.g. 24 cm, Large",
+                },
+                {
+                  name: "material",
+                  label: "Material",
+                  placeholder: "e.g. Stainless Steel",
+                },
+                {
+                  name: "capacity",
+                  label: "Capacity",
+                  placeholder: "e.g. 600 ml, 3 litres",
+                },
+                {
+                  name: "colour",
+                  label: "Colour",
+                  placeholder: "e.g. Red, Maroon",
+                },
+                {
+                  name: "warranty",
+                  label: "Warranty",
+                  placeholder: "e.g. 1 year",
+                },
+                {
+                  name: "model_number",
+                  label: "Model Number / SKU",
+                  placeholder: "Optional product model",
+                },
+              ].map((field) => (
+                <div key={field.name}>
+                  <label
+                    htmlFor={field.name}
+                    className="mb-2 block text-sm font-semibold"
+                  >
+                    {field.label}
+                  </label>
+
+                  <input
+                    id={field.name}
+                    name={field.name}
+                    type="text"
+                    defaultValue={
+                      editingProduct
+                        ? String(
+                            editingProduct[
+                              field.name as keyof Product
+                            ] ?? ""
+                          )
+                        : ""
+                    }
+                    placeholder={field.placeholder}
+                    className="w-full rounded-xl border border-zinc-300 px-4 py-3 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
+                  />
+                </div>
+              ))}
+
 
               {/* DESCRIPTION */}
 
