@@ -105,7 +105,7 @@ export async function generateMetadata({
     };
   }
 
-  const title = `${product.name} | Dayal Kitchen Ware`;
+  const title = product.name;
 
   const description =
     product.description?.trim() ||
