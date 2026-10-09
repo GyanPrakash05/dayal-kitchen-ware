@@ -112,11 +112,12 @@ function BusinessSchema() {
     "@context": "https://schema.org",
 
     "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": `${BASE_URL}/#website`,
-        url: BASE_URL,
-        name: STORE_NAME,
+     {
+  "@type": "WebSite",
+  "@id": `${BASE_URL}/#website`,
+  url: BASE_URL,
+  name: "Dayal Kitchen Ware",
+  alternateName: "Dayal Kitchen Ware",
 
         description:
           "Kitchenware, cookware and everyday kitchen essentials from Dayal Kitchen Ware.",
